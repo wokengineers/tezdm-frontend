@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import OnboardingPage from './pages/OnboardingPage';
 import ConnectAccountsPage from './pages/ConnectAccountsPage';
+import OAuthRedirectPage from './pages/OAuthRedirectPage';
 import DashboardPage from './pages/DashboardPage';
 import AutomationBuilderPage from './pages/AutomationBuilderPage';
 import AutomationListPage from './pages/AutomationListPage';
@@ -20,6 +21,7 @@ import ActivityLogPage from './pages/ActivityLogPage';
 
 // Import components
 import ProtectedRoute from './components/ProtectedRoute';
+import PublicRoute from './components/PublicRoute';
 import Layout from './components/Layout';
 
 /**
@@ -33,9 +35,18 @@ const App: React.FC = () => {
         <Router>
           <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
             <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
+              {/* Public routes - redirect authenticated users to dashboard */}
+              <Route path="/login" element={
+                <PublicRoute>
+                  <LoginPage />
+                </PublicRoute>
+              } />
+              <Route path="/signup" element={
+                <PublicRoute>
+                  <SignupPage />
+                </PublicRoute>
+              } />
+              <Route path="/oauth-redirect" element={<OAuthRedirectPage />} />
               
               {/* Protected routes with layout */}
               <Route path="/" element={

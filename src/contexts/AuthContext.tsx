@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { mockData } from '../constants/mockApi';
+import { authApi } from '../services/authApi';
 
 /**
  * User interface
@@ -33,7 +34,14 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  signout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
+  // New OTP methods
+  generateOtp: (email: string) => Promise<boolean>;
+  validateOtp: (email: string, otp: string) => Promise<boolean>;
+  otpStep: 'email' | 'otp' | 'loading' | 'success';
+  currentEmail: string | null;
+  error: string | null;
 }
 
 /**
@@ -46,7 +54,14 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => false,
   signup: async () => false,
   logout: () => {},
+  signout: async () => {},
   updateUser: () => {},
+  // New OTP methods
+  generateOtp: async () => false,
+  validateOtp: async () => false,
+  otpStep: 'email',
+  currentEmail: null,
+  error: null,
 });
 
 /**
@@ -64,6 +79,9 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [otpStep, setOtpStep] = useState<'email' | 'otp' | 'loading' | 'success'>('email');
+  const [currentEmail, setCurrentEmail] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   /**
    * Check if user is authenticated
@@ -140,6 +158,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = (): void => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('group_id');
+  };
+
+  /**
+   * Signout user with API call
+   */
+  const signout = async (): Promise<void> => {
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+      const groupId = localStorage.getItem('group_id');
+      
+      if (refreshToken && groupId) {
+        await authApi.signout(refreshToken, parseInt(groupId));
+      }
+    } catch (error) {
+      console.error('Signout error:', error);
+      // Continue with local logout even if API call fails
+    } finally {
+      // Always clear local data
+      setUser(null);
+      setOtpStep('email');
+      setCurrentEmail(null);
+      setError(null);
+      localStorage.removeItem('user');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('group_id');
+    }
   };
 
   /**
@@ -151,6 +199,88 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const updatedUser = { ...user, ...updates };
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  };
+
+  /**
+   * Generate OTP for email
+   * @param email - User email
+   * @returns Promise resolving to success status
+   */
+  const generateOtp = async (email: string): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      setOtpStep('loading');
+      
+      await authApi.generateOtp(email);
+      
+      setCurrentEmail(email);
+      setOtpStep('otp');
+      return true;
+    } catch (error) {
+      console.error('Generate OTP error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to generate OTP');
+      setOtpStep('email');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Validate OTP and complete authentication
+   * @param email - User email
+   * @param otp - OTP code
+   * @returns Promise resolving to success status
+   */
+  const validateOtp = async (email: string, otp: string): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      setOtpStep('loading');
+      
+      // Step 1: Validate OTP and get initial tokens
+      const otpResponse = await authApi.validateOtp(email, otp);
+      const { access_token, refresh_token } = otpResponse.data;
+      
+      // Step 2: Get user groups
+      const groupsResponse = await authApi.getGroups(access_token);
+      const groups = groupsResponse.data;
+      
+      if (groups.length === 0) {
+        throw new Error('No groups found for this user');
+      }
+      
+      // Step 3: Refresh token with first group
+      const firstGroup = groups[0];
+      const finalResponse = await authApi.refreshTokenWithGroup(refresh_token, firstGroup.id);
+      const finalTokens = finalResponse.data;
+      
+      // Step 4: Create user object and store tokens
+      const userData: User = {
+        ...mockData.user,
+        id: email,
+        email,
+        name: email.split('@')[0], // Use email prefix as name
+        lastLogin: new Date().toISOString(),
+      };
+      
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('access_token', finalTokens.access_token);
+      localStorage.setItem('refresh_token', finalTokens.refresh_token);
+      localStorage.setItem('group_id', firstGroup.id.toString());
+      
+      setOtpStep('success');
+      return true;
+    } catch (error) {
+      console.error('Validate OTP error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to validate OTP');
+      setOtpStep('otp');
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -176,7 +306,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     signup,
     logout,
+    signout,
     updateUser,
+    generateOtp,
+    validateOtp,
+    otpStep,
+    currentEmail,
+    error,
   };
 
   return (
