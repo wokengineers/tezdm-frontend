@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+1. always index full code.
+2. before writing code first explain your approach and how it impacts the overall system.
+3. don't just write into multiple files, first tell me your approach and why than write file by file 
+4. when writing code make sure if you add some code, and some another code is not being used make sure to remove it 
+5. always keep updating the doc.
+6. always keep the overall project in mind while writing code.

@@ -1,6 +1,6 @@
 // API Configurations
 export const API_CONFIG = {
-  BASE_URL: process.env.REACT_APP_API_BASE_URL || 'https://api.stage.wokengineers.com/v1',
+  BASE_URL: process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/v1',
   ENDPOINTS: {
     AUTH: {
       OTP_AUTHENTICATION: '/ums/auth/otp_authentication',

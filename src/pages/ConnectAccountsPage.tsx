@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Zap, Instagram, Facebook, Smartphone, ExternalLink, ArrowLeft } from 'lucide-react';
 import { profileApi } from '../services/profileApi';
 import { useAuth } from '../contexts/AuthContext';
-import { API_CONFIG } from '../config/api';
+import { SecurityManager } from '../utils/securityManager';
 import OAuthModal from '../components/OAuthModal';
 
 interface Platform {
@@ -44,8 +44,11 @@ const ConnectAccountsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Get group ID from localStorage (stored during login)
-  const groupId = localStorage.getItem('group_id');
+  // Get group ID from secure storage
+  const getGroupId = (): number | null => {
+    const tokens = SecurityManager.getTokens();
+    return tokens ? tokens.group_id : null;
+  };
 
   useEffect(() => {
     if (!hasLoadedRef.current) {
@@ -78,12 +81,13 @@ const ConnectAccountsPage: React.FC = () => {
    */
   const loadConnectedAccounts = async (): Promise<void> => {
     try {
+      const groupId = getGroupId();
       if (!groupId) {
         console.error('Group ID not found');
         return;
       }
 
-      const response = await profileApi.getConnectedAccounts(parseInt(groupId));
+      const response = await profileApi.getConnectedAccounts(groupId);
       setConnectedAccounts(response.data);
     } catch (error) {
       console.error('Failed to load connected accounts:', error);
@@ -98,12 +102,13 @@ const ConnectAccountsPage: React.FC = () => {
       setModalLoading(true);
       setError('');
       
+      const groupId = getGroupId();
       if (!groupId) {
         throw new Error('Group ID not found. Please login again.');
       }
 
       // Get OAuth URL from API
-      const response = await profileApi.getOAuthUrl(platform.id, parseInt(groupId));
+      const response = await profileApi.getOAuthUrl(platform.id, groupId);
       setOauthUrl(response.data.url);
       setSelectedPlatform(platform);
       setShowModal(true);
@@ -130,6 +135,7 @@ const ConnectAccountsPage: React.FC = () => {
    */
   const handleDeleteAccount = async (accountId: number): Promise<void> => {
     try {
+      const groupId = getGroupId();
       if (!groupId) {
         setError('Group ID not found. Please login again.');
         return;
@@ -137,7 +143,7 @@ const ConnectAccountsPage: React.FC = () => {
 
       setDeletingAccount(accountId);
       
-      await profileApi.deleteConnectedAccount(accountId, parseInt(groupId));
+      await profileApi.deleteConnectedAccount(accountId, groupId);
       
       // Reload connected accounts
       await loadConnectedAccounts();
@@ -169,6 +175,16 @@ const ConnectAccountsPage: React.FC = () => {
         return <Instagram className="w-8 h-8" />;
       case 'facebook_page':
         return <Facebook className="w-8 h-8" />;
+      case 'whatsapp':
+        return <Smartphone className="w-8 h-8" />;
+      case 'linkedin':
+        return <Zap className="w-8 h-8" />; // You can import LinkedIn icon if needed
+      case 'twitter':
+        return <Zap className="w-8 h-8" />; // You can import Twitter icon if needed
+      case 'youtube':
+        return <Zap className="w-8 h-8" />; // You can import YouTube icon if needed
+      case 'tiktok':
+        return <Zap className="w-8 h-8" />; // You can import TikTok icon if needed
       default:
         return <Zap className="w-8 h-8" />;
     }
@@ -183,8 +199,18 @@ const ConnectAccountsPage: React.FC = () => {
         return 'Instagram';
       case 'facebook_page':
         return 'Facebook Page';
+      case 'whatsapp':
+        return 'WhatsApp';
+      case 'linkedin':
+        return 'LinkedIn';
+      case 'twitter':
+        return 'Twitter';
+      case 'youtube':
+        return 'YouTube';
+      case 'tiktok':
+        return 'TikTok';
       default:
-        return platformType;
+        return platformType.charAt(0).toUpperCase() + platformType.slice(1).replace('_', ' ');
     }
   };
 
@@ -197,10 +223,29 @@ const ConnectAccountsPage: React.FC = () => {
         return 'bg-gradient-to-r from-pink-500 to-purple-600';
       case 'facebook_page':
         return 'bg-gradient-to-r from-blue-600 to-blue-700';
+      case 'whatsapp':
+        return 'bg-gradient-to-r from-green-500 to-green-600';
+      case 'linkedin':
+        return 'bg-gradient-to-r from-blue-700 to-blue-800';
+      case 'twitter':
+        return 'bg-gradient-to-r from-blue-400 to-blue-500';
+      case 'youtube':
+        return 'bg-gradient-to-r from-red-500 to-red-600';
+      case 'tiktok':
+        return 'bg-gradient-to-r from-pink-400 to-purple-500';
       default:
         return 'bg-gradient-to-r from-gray-600 to-gray-700';
     }
   };
+
+  /**
+   * Check if platform is already connected
+   */
+  const isPlatformConnected = (platformType: string): boolean => {
+    return connectedAccounts.some(account => account.platform === platformType);
+  };
+
+
 
   /**
    * Get account status
@@ -272,134 +317,190 @@ const ConnectAccountsPage: React.FC = () => {
             </div>
           )}
 
-          {/* Connected Accounts Section */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Connected Accounts ({connectedAccounts.length})
-              </h2>
-            </div>
-            <div className="card">
-              {connectedAccounts.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
-                          Platform
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
-                          Name
-                        </th>
-                        <th className="text-center py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
-                          Status
-                        </th>
-                        <th className="text-center py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {connectedAccounts.map((account) => {
-                        const status = getAccountStatus(account.state);
-                        return (
-                          <tr key={account.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                            <td className="py-3 px-4">
-                              <div className="flex items-center space-x-3">
-                                <div className={`p-2 rounded-lg ${getPlatformColor(account.platform)}`}>
-                                  {getPlatformIcon(account.platform)}
-                                </div>
-                                <span className="text-gray-900 dark:text-gray-100 font-medium">
-                                  {getPlatformName(account.platform)}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="text-gray-900 dark:text-gray-100 font-medium">
-                                {account.name}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${status.bgColor} ${status.color}`}>
-                                {status.text}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <button
-                                onClick={() => handleDeleteAccount(account.id)}
-                                disabled={deletingAccount === account.id}
-                                className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 disabled:opacity-50 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-full transition-colors"
-                                title="Delete account"
-                              >
-                                {deletingAccount === account.id ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b border-red-600"></div>
-                                ) : (
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                )}
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Instagram className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    No accounts connected
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Connect your first social media account to start automating your engagement
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Available Platforms Section */}
-          <div className="mb-6">
+          <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Connect More Accounts
+              Connect Your Account
             </h2>
           </div>
 
           {/* Platform Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {platforms.map((platform) => (
-              <button
-                key={platform.id}
-                onClick={() => handlePlatformSelect(platform)}
-                disabled={loading}
-                className="group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg transition-all duration-200 hover:border-primary-300 dark:hover:border-primary-600"
-              >
-                <div className="flex items-center space-x-4">
-                  <div className={`p-3 rounded-lg ${getPlatformColor(platform.platform_type)}`}>
-                    {getPlatformIcon(platform.platform_type)}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {platforms.map((platform) => {
+              const isConnected = isPlatformConnected(platform.platform_type);
+              
+              return (
+                <button
+                  key={platform.id}
+                  onClick={() => handlePlatformSelect(platform)}
+                  disabled={loading || isConnected}
+                  className={`group relative bg-white dark:bg-gray-800 rounded-xl border p-6 transition-all duration-200 ${
+                    isConnected 
+                      ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 cursor-not-allowed opacity-75' 
+                      : 'border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-primary-300 dark:hover:border-primary-600'
+                  }`}
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className={`p-3 rounded-lg ${getPlatformColor(platform.platform_type)}`}>
+                      {getPlatformIcon(platform.platform_type)}
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {getPlatformName(platform.platform_type)}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {isConnected 
+                          ? `${getPlatformName(platform.platform_type)} already connected`
+                          : `Connect your ${getPlatformName(platform.platform_type).toLowerCase()} account`
+                        }
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {getPlatformName(platform.platform_type)}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Connect your {getPlatformName(platform.platform_type).toLowerCase()} account
-                    </p>
-                  </div>
-                </div>
-                
-                {loading && (
-                  <div className="absolute inset-0 bg-white/80 dark:bg-gray-800/80 rounded-xl flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
-                  </div>
-                )}
-              </button>
-            ))}
+                  
+                  {isConnected && (
+                    <div className="absolute top-2 right-2">
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {loading && !isConnected && (
+                    <div className="absolute inset-0 bg-white/80 dark:bg-gray-800/80 rounded-xl flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
+
+          {/* Connected Accounts Section */}
+          <div className="mb-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Your Connected Account
+              </h2>
+            </div>
+            
+            {connectedAccounts.length > 0 ? (
+              <div className="space-y-4">
+                {connectedAccounts.map((account, index) => {
+                  const status = getAccountStatus(account.state);
+                  const isPrimary = index === 0; // First account is primary for demo
+                  const isInactive = account.state !== 'token_available';
+                  
+                  return (
+                    <div key={account.id} className="bg-white dark:bg-gray-800/80 rounded-2xl p-6 border border-gray-200 dark:border-gray-700/50 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          {/* Profile Picture / Avatar */}
+                          <div className="relative">
+                            {account.profile_link ? (
+                              // Use actual profile photo
+                              <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+                                <img 
+                                  src={account.profile_link} 
+                                  alt={account.name || 'Profile'} 
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    // Fallback to avatar if image fails to load
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    target.nextElementSibling?.classList.remove('hidden');
+                                  }}
+                                />
+                                {/* Fallback avatar (hidden by default) */}
+                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-white text-xl font-semibold hidden">
+                                  {account.name ? account.name.charAt(0).toUpperCase() : 'U'}
+                                </div>
+                              </div>
+                            ) : (
+                              // Use avatar when no profile link
+                              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-white text-xl font-semibold">
+                                {account.name ? account.name.charAt(0).toUpperCase() : 'U'}
+                              </div>
+                            )}
+                            {/* Platform Icon */}
+                            <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center ${getPlatformColor(account.platform)}`}>
+                              {React.cloneElement(getPlatformIcon(account.platform), { className: 'w-4 h-4 text-white' })}
+                            </div>
+                          </div>
+                          
+                          {/* Account Info */}
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                @{account.name || 'unknown'}
+                              </h3>
+                            </div>
+                            <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">
+                              {getPlatformName(account.platform)} Business Account
+                            </p>
+                            {isPrimary && !isInactive && (
+                              <span className="text-green-400 text-sm font-medium">
+                                Primary Account
+                              </span>
+                            )}
+                            {isInactive && (
+                              <span className="text-yellow-500 text-sm font-medium">
+                                Inactive
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex items-center space-x-3">
+                          {isInactive ? (
+                            <span className="px-4 py-2 bg-yellow-600 text-yellow-100 rounded-lg text-sm font-medium">
+                              Inactive
+                            </span>
+                          ) : (
+                            <>
+                              <span className="px-4 py-2 bg-green-600 text-green-100 rounded-lg text-sm font-medium">
+                                Connected
+                              </span>
+                              <button
+                                onClick={() => handleDeleteAccount(account.id)}
+                                disabled={deletingAccount === account.id}
+                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-red-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                              >
+                                {deletingAccount === account.id ? (
+                                  <div className="flex items-center space-x-2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b border-red-100"></div>
+                                    <span>Disconnecting...</span>
+                                  </div>
+                                ) : (
+                                  'Disconnect'
+                                )}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-gray-800/80 rounded-2xl p-8 border border-gray-200 dark:border-gray-700/50 text-center shadow-sm">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Instagram className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  No accounts connected
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Connect your first social media account to start automating your engagement
+                </p>
+              </div>
+            )}
+          </div>
+
+
 
           {/* Empty state */}
           {platforms.length === 0 && !loading && (

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { mockData } from '../constants/mockApi';
 import { authApi } from '../services/authApi';
+import { SecurityManager } from '../utils/securityManager';
 
 /**
  * User interface
@@ -157,10 +158,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const logout = (): void => {
     setUser(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('group_id');
+    setOtpStep('email');
+    setCurrentEmail(null);
+    setError(null);
+    SecurityManager.clearAllData();
   };
 
   /**
@@ -168,11 +169,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const signout = async (): Promise<void> => {
     try {
-      const refreshToken = localStorage.getItem('refresh_token');
-      const groupId = localStorage.getItem('group_id');
+      const tokens = SecurityManager.getTokens();
       
-      if (refreshToken && groupId) {
-        await authApi.signout(refreshToken, parseInt(groupId));
+      if (tokens) {
+        await authApi.signout(tokens.refresh_token, tokens.group_id);
       }
     } catch (error) {
       console.error('Signout error:', error);
@@ -183,10 +183,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setOtpStep('email');
       setCurrentEmail(null);
       setError(null);
-      localStorage.removeItem('user');
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('group_id');
+      SecurityManager.clearAllData();
     }
   };
 
@@ -198,7 +195,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (user) {
       const updatedUser = { ...user, ...updates };
       setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      SecurityManager.storeUser(updatedUser);
     }
   };
 
@@ -257,7 +254,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const finalResponse = await authApi.refreshTokenWithGroup(refresh_token, firstGroup.id);
       const finalTokens = finalResponse.data;
       
-      // Step 4: Create user object and store tokens
+      // Step 4: Create user object and store tokens securely
       const userData: User = {
         ...mockData.user,
         id: email,
@@ -266,11 +263,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         lastLogin: new Date().toISOString(),
       };
       
+      // Get token expiry time
+      const expiryTime = SecurityManager.getTokenExpiry(finalTokens.access_token);
+      if (!expiryTime) {
+        throw new Error('Invalid token response');
+      }
+      
+      // Store user and tokens securely
       setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('access_token', finalTokens.access_token);
-      localStorage.setItem('refresh_token', finalTokens.refresh_token);
-      localStorage.setItem('group_id', firstGroup.id.toString());
+      SecurityManager.storeUser(userData);
+      SecurityManager.storeTokens({
+        access_token: finalTokens.access_token,
+        refresh_token: finalTokens.refresh_token,
+        expires_at: expiryTime,
+        group_id: firstGroup.id
+      });
       
       setOtpStep('success');
       return true;
@@ -285,18 +292,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
-    // Check for existing user session on app load
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
+    // Check for existing user session on app load with security validation
+    const validateAndLoadUser = () => {
       try {
-        const parsedUser = JSON.parse(savedUser);
-        setUser(parsedUser);
+        // Validate all stored data integrity
+        const validation = SecurityManager.validateAllData();
+        
+        if (!validation.isValid) {
+          console.warn('Data integrity validation failed:', validation.errors);
+          SecurityManager.clearAllData();
+          setIsLoading(false);
+          return;
+        }
+        
+        // Check if user is authenticated
+        if (SecurityManager.isAuthenticated()) {
+          const user = SecurityManager.getUser();
+          if (user) {
+            setUser(user);
+          }
+        }
       } catch (error) {
-        console.error('Error parsing saved user:', error);
-        localStorage.removeItem('user');
+        console.error('Error validating user session:', error);
+        SecurityManager.clearAllData();
       }
-    }
-    setIsLoading(false);
+      
+      setIsLoading(false);
+    };
+
+    validateAndLoadUser();
+
+    // Listen for logout events from secure API
+    const handleLogout = (event: CustomEvent) => {
+      console.log('Received logout event:', event.detail);
+      logout();
+    };
+
+    window.addEventListener('auth:logout', handleLogout as EventListener);
+
+    return () => {
+      window.removeEventListener('auth:logout', handleLogout as EventListener);
+    };
   }, []);
 
   const value: AuthContextType = {

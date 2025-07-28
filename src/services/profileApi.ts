@@ -1,4 +1,4 @@
-import { API_CONFIG } from '../config/api';
+import { secureApi } from './secureApi';
 
 // Type definitions
 interface ApiResponse<T> {
@@ -43,33 +43,10 @@ interface OAuthRedirectRequest {
  */
 export const profileApi = {
   /**
-   * Make API request with standardized error handling
+   * Make API request with automatic token refresh and security
    */
   async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
-    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
-    
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
-        ...options,
-      });
-
-      const data = await response.json();
-
-      if (data.status !== 1) {
-        throw new Error(data.message || 'API request failed');
-      }
-
-      return data;
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Network error occurred');
-    }
+    return secureApi.makeRequest<T>(endpoint, options);
   },
 
   /**
