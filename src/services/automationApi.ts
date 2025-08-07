@@ -1,0 +1,146 @@
+import { secureApi } from './secureApi';
+
+// Type definitions
+interface ApiResponse<T> {
+  status: number;
+  message: string;
+  data: T;
+}
+
+interface EventConfig {
+  keywords?: string[];
+  post_ids?: any;
+  all_posts?: boolean;
+  fuzzy_match_allowed?: boolean;
+  fuzzy_match_percentage?: number;
+  template?: string;
+}
+
+interface Event {
+  id: number;
+  event_type: string;
+  event_category: string;
+  event_config: EventConfig;
+  previous_event_uuid: string | null;
+  is_active: boolean;
+  event_uuid: string;
+}
+
+interface Automation {
+  id: number;
+  name: string;
+  is_active: boolean;
+  events: Event[];
+  profile_info_id: number;
+}
+
+interface AutomationFilters {
+  search?: string;
+  is_active?: boolean;
+  event_category?: string;
+  ordering?: string;
+}
+
+/**
+ * Automation API service
+ */
+export const automationApi = {
+  /**
+   * Make API request with automatic token refresh and security
+   */
+  async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
+    return secureApi.makeRequest<T>(endpoint, options);
+  },
+
+  /**
+   * Get automations list with filters
+   */
+  async getAutomations(groupId: number, filters: AutomationFilters = {}): Promise<ApiResponse<Automation[]>> {
+    const params = new URLSearchParams();
+    
+    // Add group_id (mandatory)
+    params.append('group_id', groupId.toString());
+    
+    // Add ordering
+    if (filters.ordering) {
+      params.append('ordering', filters.ordering);
+    } else {
+      params.append('ordering', '-creation_date'); // default
+    }
+    
+    // Add search parameter (lowercase)
+    if (filters.search && filters.search.trim()) {
+      params.append('search', filters.search.toLowerCase().trim());
+    }
+    
+    // Add is_active filter (only when not "all")
+    if (filters.is_active !== undefined) {
+      params.append('is_active', filters.is_active.toString());
+    }
+    
+    // Add event_category filter (only when not "all")
+    if (filters.event_category && filters.event_category !== 'all') {
+      params.append('event_category', filters.event_category);
+    }
+    
+    const queryString = params.toString();
+    const endpoint = `/tezdm/workflow/${queryString ? `?${queryString}` : ''}`;
+    
+    return this.makeRequest<Automation[]>(endpoint);
+  },
+
+  /**
+   * Toggle automation status
+   */
+  async toggleAutomation(automationId: number, groupId: number, isActive: boolean): Promise<ApiResponse<Automation>> {
+    return this.makeRequest<Automation>(`/tezdm/workflow/${automationId}/?group_id=${groupId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_active: isActive }),
+    });
+  },
+
+  /**
+   * Delete automation
+   */
+  async deleteAutomation(automationId: number, groupId: number): Promise<ApiResponse<{ message: string; status: number }>> {
+    return this.makeRequest<{ message: string; status: number }>(`/tezdm/workflow/${automationId}/?group_id=${groupId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  /**
+   * Create new automation
+   */
+  async createAutomation(groupId: number, payload: {
+    workflow: {
+      name: string;
+      description?: string;
+    };
+    events: Array<{
+      temp_id: string;
+      event_type: 'trigger' | 'action';
+      event_category: string;
+      event_config: any;
+      next_event_temp_id?: string;
+      is_active: boolean;
+    }>;
+  }): Promise<ApiResponse<Automation>> {
+    // Add profile_info_id to the payload (you'll need to get this from the user's connected accounts)
+    const profileInfoId = 1; // TODO: Get actual profile_info_id from user's connected accounts
+    
+    const createPayload = {
+      workflow: {
+        ...payload.workflow,
+        profile_info_id: profileInfoId
+      },
+      events: payload.events
+    };
+
+    return this.makeRequest<Automation>('/tezdm/workflow/', {
+      method: 'POST',
+      body: JSON.stringify(createPayload),
+    });
+  },
+};
+
+export type { Automation, Event, EventConfig, AutomationFilters }; 

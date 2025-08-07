@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Zap, Instagram, Facebook, Smartphone, ExternalLink, ArrowLeft } from 'lucide-react';
 import { profileApi } from '../services/profileApi';
 import { useAuth } from '../contexts/AuthContext';
 import { SecurityManager } from '../utils/securityManager';
+
+import LoadingSpinner from '../components/LoadingSpinner';
+import LoadingButton from '../components/LoadingButton';
 import OAuthModal from '../components/OAuthModal';
 
 interface Platform {
@@ -32,17 +35,21 @@ interface ConnectedAccount {
 const ConnectAccountsPage: React.FC = () => {
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null);
   const [oauthUrl, setOauthUrl] = useState<string>('');
   const [showModal, setShowModal] = useState<boolean>(false);
   const [modalLoading, setModalLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [loadingPlatforms, setLoadingPlatforms] = useState<boolean>(true);
+  const [loadingAccounts, setLoadingAccounts] = useState<boolean>(false);
+  const [connectingPlatform, setConnectingPlatform] = useState<number | null>(null);
   const [deletingAccount, setDeletingAccount] = useState<number | null>(null);
   const hasLoadedRef = useRef<boolean>(false);
   
   const navigate = useNavigate();
   const { user } = useAuth();
+
+
 
   // Get group ID from secure storage
   const getGroupId = (): number | null => {
@@ -50,47 +57,51 @@ const ConnectAccountsPage: React.FC = () => {
     return tokens ? tokens.group_id : null;
   };
 
+  const loadPlatforms = useCallback(async (): Promise<void> => {
+    console.log('Loading platforms...');
+    setError('');
+    setLoadingPlatforms(true);
+    try {
+      const response = await profileApi.getOAuthPlatforms();
+      console.log('Platforms API response:', response);
+      setPlatforms(response.data);
+      // After platforms are loaded, load connected accounts
+      await loadConnectedAccounts();
+    } catch (error) {
+      console.error('Failed to load platforms:', error);
+      setError('Failed to load available platforms. Please try again.');
+    } finally {
+      setLoadingPlatforms(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!hasLoadedRef.current) {
       loadPlatforms();
-      loadConnectedAccounts();
       hasLoadedRef.current = true;
     }
   }, []);
 
   /**
-   * Load available OAuth platforms
-   */
-  const loadPlatforms = async (): Promise<void> => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      const response = await profileApi.getOAuthPlatforms();
-      setPlatforms(response.data);
-    } catch (error) {
-      console.error('Failed to load platforms:', error);
-      setError('Failed to load available platforms. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
    * Load connected accounts
    */
   const loadConnectedAccounts = async (): Promise<void> => {
-    try {
-      const groupId = getGroupId();
-      if (!groupId) {
-        console.error('Group ID not found');
-        return;
-      }
+    const groupId = getGroupId();
+    if (!groupId) {
+      console.error('Group ID not found');
+      return;
+    }
 
+    setLoadingAccounts(true);
+    try {
       const response = await profileApi.getConnectedAccounts(groupId);
+      console.log('Connected accounts API response:', response);
       setConnectedAccounts(response.data);
     } catch (error) {
       console.error('Failed to load connected accounts:', error);
+      // Don't set error here, just log it since we want to show platforms anyway
+    } finally {
+      setLoadingAccounts(false);
     }
   };
 
@@ -98,25 +109,36 @@ const ConnectAccountsPage: React.FC = () => {
    * Handle platform selection
    */
   const handlePlatformSelect = async (platform: Platform): Promise<void> => {
-    try {
-      setModalLoading(true);
-      setError('');
-      
-      const groupId = getGroupId();
-      if (!groupId) {
-        throw new Error('Group ID not found. Please login again.');
-      }
+    // Don't allow selection if already connecting this platform
+    if (connectingPlatform === platform.id) {
+      return;
+    }
 
-      // Get OAuth URL from API
+    setModalLoading(true);
+    setError('');
+    setConnectingPlatform(platform.id);
+    
+    const groupId = getGroupId();
+    if (!groupId) {
+      setError('Group ID not found. Please login again.');
+      setModalLoading(false);
+      setConnectingPlatform(null);
+      return;
+    }
+
+    setSelectedPlatform(platform);
+    
+    try {
       const response = await profileApi.getOAuthUrl(platform.id, groupId);
+      console.log('OAuth URL response:', response);
       setOauthUrl(response.data.url);
-      setSelectedPlatform(platform);
       setShowModal(true);
     } catch (error) {
       console.error('Failed to get OAuth URL:', error);
       setError('Failed to get connection URL. Please try again.');
     } finally {
       setModalLoading(false);
+      setConnectingPlatform(null);
     }
   };
 
@@ -134,20 +156,20 @@ const ConnectAccountsPage: React.FC = () => {
    * Handle delete connected account
    */
   const handleDeleteAccount = async (accountId: number): Promise<void> => {
-    try {
-      const groupId = getGroupId();
-      if (!groupId) {
-        setError('Group ID not found. Please login again.');
-        return;
-      }
+    if (deletingAccount === accountId) return;
+    
+    const groupId = getGroupId();
+    if (!groupId) {
+      setError('Group ID not found. Please login again.');
+      return;
+    }
 
-      setDeletingAccount(accountId);
-      
+    setDeletingAccount(accountId);
+    try {
       await profileApi.deleteConnectedAccount(accountId, groupId);
-      
-      // Reload connected accounts
+      console.log('Account deleted successfully');
+      // Reload connected accounts after successful deletion
       await loadConnectedAccounts();
-      
       setError('');
     } catch (error) {
       console.error('Failed to delete account:', error);
@@ -245,8 +267,6 @@ const ConnectAccountsPage: React.FC = () => {
     return connectedAccounts.some(account => account.platform === platformType);
   };
 
-
-
   /**
    * Get account status
    */
@@ -278,11 +298,11 @@ const ConnectAccountsPage: React.FC = () => {
     });
   };
 
-  if (loading && !selectedPlatform) {
+  if (loadingPlatforms && !selectedPlatform) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+          <LoadingSpinner size="lg" className="mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">Loading platforms...</p>
         </div>
       </div>
@@ -326,55 +346,73 @@ const ConnectAccountsPage: React.FC = () => {
 
           {/* Platform Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {platforms.map((platform) => {
-              const isConnected = isPlatformConnected(platform.platform_type);
-              
-              return (
-                <button
+            {platforms && platforms.length > 0 ? (
+              platforms.map((platform) => {
+                const isConnected = isPlatformConnected(platform.platform_type);
+                
+                return (
+                                  <button
                   key={platform.id}
                   onClick={() => handlePlatformSelect(platform)}
-                  disabled={loading || isConnected}
+                  disabled={loadingAccounts || isConnected || connectingPlatform === platform.id}
                   className={`group relative bg-white dark:bg-gray-800 rounded-xl border p-6 transition-all duration-200 ${
                     isConnected 
                       ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 cursor-not-allowed opacity-75' 
+                      : connectingPlatform === platform.id
+                      ? 'border-gray-300 dark:border-gray-600 cursor-not-allowed opacity-75'
                       : 'border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-primary-300 dark:hover:border-primary-600'
                   }`}
                 >
-                  <div className="flex items-center space-x-4">
-                    <div className={`p-3 rounded-lg ${getPlatformColor(platform.platform_type)}`}>
-                      {getPlatformIcon(platform.platform_type)}
-                    </div>
-                    <div className="text-left">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {getPlatformName(platform.platform_type)}
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center space-x-4">
+                      <div className={`p-3 rounded-lg ${getPlatformColor(platform.platform_type)}`}>
+                        {getPlatformIcon(platform.platform_type)}
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {getPlatformName(platform.platform_type)}
+                        </h3>
+                                              <p className="text-sm text-gray-600 dark:text-gray-400">
                         {isConnected 
                           ? `${getPlatformName(platform.platform_type)} already connected`
+                          : loadingAccounts
+                          ? 'Loading account status...'
+                          : connectingPlatform === platform.id
+                          ? 'Connecting...'
                           : `Connect your ${getPlatformName(platform.platform_type).toLowerCase()} account`
                         }
                       </p>
-                    </div>
-                  </div>
-                  
-                  {isConnected && (
-                    <div className="absolute top-2 right-2">
-                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
                       </div>
                     </div>
-                  )}
-                  
-                  {loading && !isConnected && (
+                    
+                    {isConnected && (
+                      <div className="absolute top-2 right-2">
+                        <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                    
+                                      {(loadingAccounts || connectingPlatform === platform.id) && !isConnected && (
                     <div className="absolute inset-0 bg-white/80 dark:bg-gray-800/80 rounded-xl flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
+                      <LoadingSpinner size="md" />
                     </div>
                   )}
-                </button>
-              );
-            })}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <Zap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  No platforms available
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  There are currently no social platforms available for connection.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Connected Accounts Section */}
@@ -463,20 +501,15 @@ const ConnectAccountsPage: React.FC = () => {
                               <span className="px-4 py-2 bg-green-600 text-green-100 rounded-lg text-sm font-medium">
                                 Connected
                               </span>
-                              <button
+                              <LoadingButton
                                 onClick={() => handleDeleteAccount(account.id)}
-                                disabled={deletingAccount === account.id}
-                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-red-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                                loading={deletingAccount === account.id}
+                                loadingText="Disconnecting..."
+                                variant="danger"
+                                size="sm"
                               >
-                                {deletingAccount === account.id ? (
-                                  <div className="flex items-center space-x-2">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b border-red-100"></div>
-                                    <span>Disconnecting...</span>
-                                  </div>
-                                ) : (
-                                  'Disconnect'
-                                )}
-                              </button>
+                                Disconnect
+                              </LoadingButton>
                             </>
                           )}
                         </div>
@@ -500,10 +533,8 @@ const ConnectAccountsPage: React.FC = () => {
             )}
           </div>
 
-
-
           {/* Empty state */}
-          {platforms.length === 0 && !loading && (
+          {platforms.length === 0 && !loadingPlatforms && (
             <div className="text-center py-12">
               <Zap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
@@ -543,7 +574,7 @@ const ConnectAccountsPage: React.FC = () => {
         {/* Loading State */}
         {modalLoading && (
           <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+            <LoadingSpinner size="lg" className="mx-auto mb-4" />
             <p className="text-gray-600 dark:text-gray-400">Getting connection URL...</p>
           </div>
         )}
