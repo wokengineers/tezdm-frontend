@@ -8,7 +8,7 @@ import {
   Instagram,
   AlertTriangle
 } from 'lucide-react';
-import { automationApi, Automation } from '../services/automationApi';
+import { automationApi, Automation, TriggerActionConfig, TRIGGER_LABELS } from '../services/automationApi';
 import { SecurityManager } from '../utils/securityManager';
 
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -20,6 +20,18 @@ import LoadingButton from '../components/LoadingButton';
  */
 const AutomationListPage: React.FC = () => {
   const navigate = useNavigate();
+
+  // Handle editing automation
+  const handleEditAutomation = (automation: Automation) => {
+    console.log('📝 Navigating to edit automation:', automation);
+    // Navigate to automation builder with the automation data
+    navigate('/automations/new', { 
+      state: { 
+        editMode: true, 
+        automation: automation 
+      } 
+    });
+  };
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -29,6 +41,8 @@ const AutomationListPage: React.FC = () => {
   // API state
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [groupId, setGroupId] = useState<number | null>(null);
+  const [triggerActionConfig, setTriggerActionConfig] = useState<TriggerActionConfig | null>(null);
+  const [isLoadingConfig, setIsLoadingConfig] = useState<boolean>(true);
   
   // Delete confirmation modal state
   const [deleteModal, setDeleteModal] = useState<{
@@ -57,12 +71,31 @@ const AutomationListPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Get group ID from tokens
+  // Load trigger-action configuration
+  const loadTriggerActionConfig = async () => {
+    try {
+      setIsLoadingConfig(true);
+      console.log('🚀 Loading trigger-action configuration...');
+      const response = await automationApi.getTriggerActionConfig();
+      console.log('✅ Trigger-action configuration loaded:', response.data);
+      console.log('📋 Available triggers:', Object.keys(response.data));
+      setTriggerActionConfig(response.data);
+    } catch (error) {
+      console.error('❌ Failed to load trigger-action configuration:', error);
+    } finally {
+      setIsLoadingConfig(false);
+    }
+  };
+
+  // Get group ID from tokens and load config
   useEffect(() => {
     const tokens = SecurityManager.getTokens();
     if (tokens?.group_id) {
       setGroupId(tokens.group_id);
     }
+    
+    // Load trigger-action configuration on page load
+    loadTriggerActionConfig();
   }, []);
 
   // Fetch automations when filters change
@@ -230,6 +263,18 @@ const AutomationListPage: React.FC = () => {
 
   const sortedAutomations = automations;
 
+  // Show loading state while config is being loaded
+  if (isLoadingConfig) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <LoadingSpinner />
+          <p className="text-gray-600 dark:text-gray-400 mt-4">Loading automation configuration...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -332,10 +377,11 @@ const AutomationListPage: React.FC = () => {
               className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
             >
               <option value="all">All Triggers</option>
-              <option value="post_comment">Comments</option>
-              <option value="story_reply">Stories</option>
-              <option value="story_mention">Mentions</option>
-              <option value="dm_reply">DMs</option>
+              {triggerActionConfig && Object.keys(triggerActionConfig).map((triggerId) => (
+                <option key={triggerId} value={triggerId}>
+                  {TRIGGER_LABELS[triggerId] || triggerId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -360,7 +406,11 @@ const AutomationListPage: React.FC = () => {
             sortedAutomations.map((automation) => (
               <div
                 key={automation.id}
-                className="card hover:shadow-md transition-shadow"
+                onClick={() => {
+                  console.log('🖱️ Card clicked for automation:', automation.id);
+                  handleEditAutomation(automation);
+                }}
+                className="card group hover:shadow-md transition-all duration-200 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
               >
                 <div className="flex items-center justify-between">
                   {/* Left Side - Automation Info */}
@@ -373,7 +423,7 @@ const AutomationListPage: React.FC = () => {
                     {/* Automation Details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           {automation.name}
                         </h3>
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(automation.is_active)} text-white`}>
@@ -394,7 +444,10 @@ const AutomationListPage: React.FC = () => {
                         {automation.is_active ? 'Active' : 'Inactive'}
                       </span>
                       <button
-                        onClick={() => handleToggleAutomation(automation.id, automation.is_active)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleAutomation(automation.id, automation.is_active);
+                        }}
                         disabled={togglingAutomation === automation.id}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                           automation.is_active ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
@@ -413,10 +466,13 @@ const AutomationListPage: React.FC = () => {
                       </button>
                     </div>
 
-                    {/* Action Buttons */}
+                    {/* Delete Button Only */}
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => openDeleteModal(automation.id, automation.name)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openDeleteModal(automation.id, automation.name);
+                        }}
                         disabled={deletingAutomation === automation.id}
                         className={`p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors ${
                           deletingAutomation === automation.id ? 'opacity-50 cursor-not-allowed' : ''

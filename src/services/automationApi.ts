@@ -41,6 +41,50 @@ interface AutomationFilters {
   ordering?: string;
 }
 
+// New types for trigger-action configuration
+interface TriggerActionConfig {
+  [trigger: string]: string[][]; // Each trigger has an array of action groups
+}
+
+export interface InstagramPost {
+  post_id: string;
+  media_url: string;
+  caption?: string;
+  likes_count?: number;
+  comments_count?: number;
+  media_type?: string;
+}
+
+export interface PostsResponse {
+  data: InstagramPost[];
+  next_cursor?: string;
+}
+
+// Trigger and Action labels mapping
+export const TRIGGER_LABELS: { [key: string]: string } = {
+  'post_comment': 'Post Comment',
+  'story_mention': 'Story Mention',
+  'user_direct_message': 'User Direct Message'
+};
+
+export const ACTION_LABELS: { [key: string]: string } = {
+  'reply_to_comment': 'Reply to Comment',
+  'reply_to_comment_webhook': 'Reply to Comment (Webhook)',
+  'send_dm': 'Send Direct Message',
+  'send_dm_webhook': 'Send Direct Message (Webhook)',
+  'reply_to_dm': 'Reply to Direct Message',
+  'reply_to_dm_webhook': 'Reply to Direct Message (Webhook)'
+};
+
+export const ACTION_DESCRIPTIONS: { [key: string]: string } = {
+  'reply_to_comment': 'Reply directly to the comment on the post',
+  'reply_to_comment_webhook': 'Send a webhook notification when replying to comment',
+  'send_dm': 'Send a direct message to the user',
+  'send_dm_webhook': 'Send a webhook notification when sending DM',
+  'reply_to_dm': 'Reply to the user\'s direct message',
+  'reply_to_dm_webhook': 'Send a webhook notification when replying to DM'
+};
+
 /**
  * Automation API service
  */
@@ -51,6 +95,27 @@ export const automationApi = {
   async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
     return secureApi.makeRequest<T>(endpoint, options);
   },
+
+  /**
+   * Get trigger-action configuration
+   */
+          async getTriggerActionConfig(): Promise<ApiResponse<TriggerActionConfig>> {
+          return this.makeRequest<TriggerActionConfig>('/tezdm/workflow/get_trigger_action_config/');
+        },
+
+        async createWorkflow(payload: any): Promise<ApiResponse<any>> {
+          return this.makeRequest<any>('/tezdm/workflow/', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+          });
+        },
+
+        async updateWorkflow(workflowId: number, groupId: number, payload: any): Promise<ApiResponse<any>> {
+          return this.makeRequest<any>(`/tezdm/workflow/${workflowId}/?group_id=${groupId}`, {
+            method: 'PATCH',
+            body: JSON.stringify(payload),
+          });
+        },
 
   /**
    * Get automations list with filters
@@ -141,6 +206,14 @@ export const automationApi = {
       body: JSON.stringify(createPayload),
     });
   },
+
+  async getPosts(profileInfoId: number, nextCursor?: string): Promise<ApiResponse<InstagramPost[]>> {
+    const url = nextCursor 
+      ? `/tezdm/workflow/get_instagram_posts/?profile_info_id=${profileInfoId}&next_cursor=${nextCursor}`
+      : `/tezdm/workflow/get_instagram_posts/?profile_info_id=${profileInfoId}`;
+    
+    return this.makeRequest<InstagramPost[]>(url);
+  },
 };
 
-export type { Automation, Event, EventConfig, AutomationFilters }; 
+export type { Automation, Event, EventConfig, AutomationFilters, TriggerActionConfig }; 
