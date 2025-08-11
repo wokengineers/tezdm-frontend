@@ -585,6 +585,100 @@ const AutomationBuilderPage: React.FC = () => {
   };
 
   /**
+   * Smart filtering of event config based on user selections
+   */
+  const filterEventConfigBySelection = (config: EventConfig, eventCategory: string): any => {
+    const filtered: any = {};
+    
+    switch (eventCategory) {
+      case 'post_comment':
+        // Comments: include either all_comments OR keywords+fuzzy (not both)
+        if (config.all_comments) {
+          filtered.all_comments = true;
+          // Don't include keywords or fuzzy match if all_comments is selected
+        } else if (config.keywords && config.keywords.length > 0) {
+          filtered.keywords = config.keywords;
+          filtered.all_comments = false;
+          // Include fuzzy match settings only if keywords are used
+          if (config.fuzzy_match_allowed) {
+            filtered.fuzzy_match_allowed = config.fuzzy_match_allowed;
+            if (config.fuzzy_match_percentage) {
+              filtered.fuzzy_match_percentage = config.fuzzy_match_percentage;
+            }
+          }
+        }
+        
+        // Posts: include either all_posts OR post_ids (not both)
+        if (config.all_posts) {
+          filtered.all_posts = true;
+          // Don't include post_ids if all_posts is selected
+        } else if (config.post_ids && config.post_ids.length > 0) {
+          filtered.post_ids = config.post_ids;
+          filtered.all_posts = false;
+        }
+        break;
+        
+      case 'story_reply':
+        // Messages: include either all_messages OR keywords+fuzzy (not both)
+        if (config.all_messages) {
+          filtered.all_messages = true;
+          // Don't include keywords or fuzzy match if all_messages is selected
+        } else if (config.keywords && config.keywords.length > 0) {
+          filtered.keywords = config.keywords;
+          filtered.all_messages = false;
+          // Include fuzzy match settings only if keywords are used
+          if (config.fuzzy_match_allowed) {
+            filtered.fuzzy_match_allowed = config.fuzzy_match_allowed;
+            if (config.fuzzy_match_percentage) {
+              filtered.fuzzy_match_percentage = config.fuzzy_match_percentage;
+            }
+          }
+        }
+        
+        // Stories: include either all_stories OR story_ids (not both)
+        if (config.all_stories) {
+          filtered.all_stories = true;
+          // Don't include story_ids if all_stories is selected
+        } else if (config.story_ids && config.story_ids.length > 0) {
+          filtered.story_ids = config.story_ids;
+          filtered.all_stories = false;
+        }
+        break;
+        
+      case 'user_direct_message':
+        // Messages: include either all_messages OR keywords+fuzzy (not both)
+        if (config.all_messages) {
+          filtered.all_messages = true;
+          // Don't include keywords or fuzzy match if all_messages is selected
+        } else if (config.keywords && config.keywords.length > 0) {
+          filtered.keywords = config.keywords;
+          filtered.all_messages = false;
+          // Include fuzzy match settings only if keywords are used
+          if (config.fuzzy_match_allowed) {
+            filtered.fuzzy_match_allowed = config.fuzzy_match_allowed;
+            if (config.fuzzy_match_percentage) {
+              filtered.fuzzy_match_percentage = config.fuzzy_match_percentage;
+            }
+          }
+        }
+        break;
+        
+      default:
+        // For other event types, just clean up null/empty values
+        Object.keys(config).forEach(key => {
+          const value = (config as any)[key];
+          if (value !== null && value !== undefined && 
+              !(Array.isArray(value) && value.length === 0)) {
+            filtered[key] = value;
+          }
+        });
+        break;
+    }
+    
+    return filtered;
+  };
+
+  /**
    * Create or update automation
    */
   const createAutomation = async () => {
@@ -615,13 +709,12 @@ const AutomationBuilderPage: React.FC = () => {
       if (triggerEvent) {
         const triggerUuid = uuidv4();
         
-        // Clean up event config - remove null values and empty arrays
-        const cleanEventConfig = { ...triggerEvent.event_config } as any;
-        Object.keys(cleanEventConfig).forEach(key => {
-          if (cleanEventConfig[key] === null || 
-              (Array.isArray(cleanEventConfig[key]) && cleanEventConfig[key].length === 0)) {
-            delete cleanEventConfig[key];
-          }
+        // Smart filtering based on user selections
+        const cleanEventConfig = filterEventConfigBySelection(triggerEvent.event_config, triggerEvent.event_category);
+        console.log('🎯 Filtered trigger config:', {
+          original: triggerEvent.event_config,
+          filtered: cleanEventConfig,
+          category: triggerEvent.event_category
         });
         
         events.push({
@@ -640,13 +733,7 @@ const AutomationBuilderPage: React.FC = () => {
             const actionUuid = uuidv4();
             
             // Clean up action event config
-            const cleanActionConfig = { ...action.event_config } as any;
-            Object.keys(cleanActionConfig).forEach(key => {
-              if (cleanActionConfig[key] === null || 
-                  (Array.isArray(cleanActionConfig[key]) && cleanActionConfig[key].length === 0)) {
-                delete cleanActionConfig[key];
-              }
-            });
+            const cleanActionConfig = filterEventConfigBySelection(action.event_config, action.event_category);
             
             events.push({
               event_type: 'action',
@@ -664,13 +751,7 @@ const AutomationBuilderPage: React.FC = () => {
             const actionUuid = uuidv4();
             
             // Clean up action event config
-            const cleanActionConfig = { ...action.event_config } as any;
-            Object.keys(cleanActionConfig).forEach(key => {
-              if (cleanActionConfig[key] === null || 
-                  (Array.isArray(cleanActionConfig[key]) && cleanActionConfig[key].length === 0)) {
-                delete cleanActionConfig[key];
-              }
-            });
+            const cleanActionConfig = filterEventConfigBySelection(action.event_config, action.event_category);
             
             events.push({
               event_type: 'action',
@@ -798,23 +879,20 @@ const AutomationBuilderPage: React.FC = () => {
         if (!triggerEvent) {
           errors.push({ field: 'trigger', message: 'Please select a trigger' });
         } else {
-          // Validate trigger configuration
+          // Validate trigger configuration without modifying state
           const config = triggerEvent.event_config as any;
           
           switch (triggerEvent.event_category) {
             case 'post_comment':
-              if (config.all_comments && config.keywords && config.keywords.length > 0) {
-                errors.push({ field: 'comments', message: 'Choose either all comments or keywords, not both' });
-              }
+              // Comments validation - allow either all_comments OR keywords (not both, but don't require both to be empty)
               if (!config.all_comments && (!config.keywords || config.keywords.length === 0)) {
                 errors.push({ field: 'comments', message: 'Please add keywords or select all comments' });
               }
-              if (config.all_posts && config.post_ids && config.post_ids.length > 0) {
-                errors.push({ field: 'posts', message: 'Choose either all posts or specific posts, not both' });
-              }
+              // Posts validation - allow either all_posts OR post_ids
               if (!config.all_posts && (!config.post_ids || config.post_ids.length === 0)) {
                 errors.push({ field: 'posts', message: 'Please select posts to monitor' });
               }
+              // Fuzzy match validation - only when using keywords
               if (!config.all_comments && config.keywords && config.keywords.length > 0) {
                 if (config.fuzzy_match_allowed && !config.fuzzy_match_percentage) {
                   errors.push({ field: 'fuzzy_match_percentage', message: 'Fuzzy match percentage is required' });
@@ -826,43 +904,38 @@ const AutomationBuilderPage: React.FC = () => {
               break;
               
             case 'story_reply':
-              // Story validation
-              if (config.all_stories && config.story_ids && config.story_ids.length > 0) {
-                errors.push({ field: 'stories', message: 'Choose either all stories or specific stories, not both' });
-              }
+              // Stories validation - allow either all_stories OR story_ids
               if (!config.all_stories && (!config.story_ids || config.story_ids.length === 0)) {
                 errors.push({ field: 'stories', message: 'Please select stories to monitor' });
               }
-              
-              // Message validation
-              if (config.all_messages && config.keywords && config.keywords.length > 0) {
-                errors.push({ field: 'messages', message: 'Choose either all messages or keywords, not both' });
-              }
+              // Messages validation - allow either all_messages OR keywords
               if (!config.all_messages && (!config.keywords || config.keywords.length === 0)) {
                 errors.push({ field: 'messages', message: 'Please add keywords or select all messages' });
               }
-              
-              // Fuzzy match validation
-              if (config.fuzzy_match_allowed && !config.fuzzy_match_percentage) {
-                errors.push({ field: 'fuzzy_match_percentage', message: 'Fuzzy match percentage is required' });
-              }
-              if (config.fuzzy_match_percentage && (config.fuzzy_match_percentage < 0 || config.fuzzy_match_percentage > 100)) {
-                errors.push({ field: 'fuzzy_match_percentage', message: 'Percentage must be between 0 and 100' });
+              // Fuzzy match validation - only when using keywords
+              if (!config.all_messages && config.keywords && config.keywords.length > 0) {
+                if (config.fuzzy_match_allowed && !config.fuzzy_match_percentage) {
+                  errors.push({ field: 'fuzzy_match_percentage', message: 'Fuzzy match percentage is required' });
+                }
+                if (config.fuzzy_match_percentage && (config.fuzzy_match_percentage < 0 || config.fuzzy_match_percentage > 100)) {
+                  errors.push({ field: 'fuzzy_match_percentage', message: 'Percentage must be between 0 and 100' });
+                }
               }
               break;
               
             case 'user_direct_message':
-              if (config.all_messages && config.keywords && config.keywords.length > 0) {
-                errors.push({ field: 'messages', message: 'Choose either all messages or keywords, not both' });
-              }
+              // Messages validation - allow either all_messages OR keywords
               if (!config.all_messages && (!config.keywords || config.keywords.length === 0)) {
                 errors.push({ field: 'messages', message: 'Please add keywords or select all messages' });
               }
-              if (config.fuzzy_match_allowed && !config.fuzzy_match_percentage) {
-                errors.push({ field: 'fuzzy_match_percentage', message: 'Fuzzy match percentage is required' });
-              }
-              if (config.fuzzy_match_percentage && (config.fuzzy_match_percentage < 0 || config.fuzzy_match_percentage > 100)) {
-                errors.push({ field: 'fuzzy_match_percentage', message: 'Percentage must be between 0 and 100' });
+              // Fuzzy match validation - only when using keywords
+              if (!config.all_messages && config.keywords && config.keywords.length > 0) {
+                if (config.fuzzy_match_allowed && !config.fuzzy_match_percentage) {
+                  errors.push({ field: 'fuzzy_match_percentage', message: 'Fuzzy match percentage is required' });
+                }
+                if (config.fuzzy_match_percentage && (config.fuzzy_match_percentage < 0 || config.fuzzy_match_percentage > 100)) {
+                  errors.push({ field: 'fuzzy_match_percentage', message: 'Percentage must be between 0 and 100' });
+                }
               }
               break;
           }

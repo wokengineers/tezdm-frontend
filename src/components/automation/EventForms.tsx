@@ -237,20 +237,12 @@ export const PostCommentTriggerForm: React.FC<PostSelectionFormProps> = ({ confi
   const validateForm = (): FormValidation => {
     const errors: ValidationError[] = [];
 
-    // Comment validation
-    if (config.all_comments && config.keywords && config.keywords.length > 0) {
-      errors.push({ field: 'comments', message: 'Choose either all comments or keywords, not both' });
-    }
-
+    // Comment validation - require either all_comments OR keywords (allow both to coexist)
     if (!config.all_comments && (!config.keywords || config.keywords.length === 0)) {
       errors.push({ field: 'comments', message: 'Please add keywords or select all comments' });
     }
 
-    // Post validation
-    if (config.all_posts && config.post_ids && config.post_ids.length > 0) {
-      errors.push({ field: 'posts', message: 'Choose either all posts or specific posts, not both' });
-    }
-
+    // Post validation - require either all_posts OR post_ids (allow both to coexist)
     if (!config.all_posts && (!config.post_ids || config.post_ids.length === 0)) {
       errors.push({ field: 'posts', message: 'Please select posts to monitor' });
     }
@@ -451,20 +443,12 @@ export const StoryReplyTriggerForm: React.FC<StorySelectionFormProps> = ({ confi
   const validateForm = (): FormValidation => {
     const errors: ValidationError[] = [];
 
-    // Story validation
-    if (config.all_stories && config.story_ids && config.story_ids.length > 0) {
-      errors.push({ field: 'stories', message: 'Choose either all stories or specific stories, not both' });
-    }
-
+    // Story validation - require either all_stories OR story_ids (allow both to coexist)
     if (!config.all_stories && (!config.story_ids || config.story_ids.length === 0)) {
       errors.push({ field: 'stories', message: 'Please select stories to monitor' });
     }
 
-    // Message validation
-    if (config.all_messages && config.keywords && config.keywords.length > 0) {
-      errors.push({ field: 'messages', message: 'Choose either all messages or keywords, not both' });
-    }
-
+    // Message validation - require either all_messages OR keywords (allow both to coexist)
     if (!config.all_messages && (!config.keywords || config.keywords.length === 0)) {
       errors.push({ field: 'messages', message: 'Please add keywords or select all messages' });
     }
@@ -668,10 +652,7 @@ export const UserDirectMessageTriggerForm: React.FC<BaseFormProps> = ({ config, 
   const validateForm = (): FormValidation => {
     const errors: ValidationError[] = [];
 
-    if (config.all_messages && config.keywords && config.keywords.length > 0) {
-      errors.push({ field: 'messages', message: 'Choose either all messages or keywords, not both' });
-    }
-
+    // Message validation - require either all_messages OR keywords (allow both to coexist)
     if (!config.all_messages && (!config.keywords || config.keywords.length === 0)) {
       errors.push({ field: 'messages', message: 'Please add keywords or select all messages' });
     }
