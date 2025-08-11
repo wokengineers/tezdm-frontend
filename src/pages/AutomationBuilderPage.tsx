@@ -1047,8 +1047,8 @@ const AutomationBuilderPage: React.FC = () => {
                         : isCurrent
                         ? 'bg-primary-500 border-primary-500 text-white cursor-pointer'
                         : 'border-gray-300 dark:border-gray-600 text-gray-500 cursor-not-allowed opacity-50'
-                    }`}
-                  >
+                  }`}
+                >
                     {isCompleted ? (
                     <CheckCircle className="w-5 h-5" />
                   ) : (
@@ -1490,7 +1490,7 @@ const ActionsStep: React.FC<{
                     onAddAction(action.id);
                     document.getElementById('action-selector')?.classList.add('hidden');
                             }
-                          }}
+                  }}
                           disabled={isConflicting || isSelected}
                           className={`p-4 border rounded-lg transition-all duration-200 text-left ${
                             isSelected
@@ -1527,7 +1527,7 @@ const ActionsStep: React.FC<{
                         {action.label}
                                 {isSelected && ' (Selected)'}
                                 {isConflicting && ' (Conflicts)'}
-                              </p>
+                      </p>
                               <p className={`text-xs ${
                                 isSelected
                                   ? 'text-green-600 dark:text-green-300'

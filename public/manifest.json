@@ -1,0 +1,16 @@
+{
+  "short_name": "TezDM",
+  "name": "TezDM - Instagram Automation Platform",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#3b82f6",
+  "background_color": "#ffffff",
+  "description": "Automate your Instagram interactions with smart workflows"
+} 
