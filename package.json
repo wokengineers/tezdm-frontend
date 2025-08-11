@@ -28,7 +28,7 @@
     "start:http": "react-scripts start",
     "start:https": "HTTPS=true SSL_CRT_FILE=localhost.pem SSL_KEY_FILE=localhost-key.pem react-scripts start",
     "setup:https": "chmod +x scripts/setup-https.sh && ./scripts/setup-https.sh",
-    "build": "GENERATE_SOURCEMAP=false react-scripts build",
+    "build": "GENERATE_SOURCEMAP=false CI=false react-scripts build",
     "build:analyze": "npm run build && npx serve -s build",
     "test": "react-scripts test",
     "test:ci": "react-scripts test --watchAll=false --coverage --passWithNoTests",
