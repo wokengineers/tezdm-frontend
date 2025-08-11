@@ -1,64 +1,107 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Zap, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Mail, MessageSquare, Eye, EyeOff, Zap, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
- * Login page component with AutoSocial design
+ * OTP-based Login page component
  * @returns Login page component
  */
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [rememberMe, setRememberMe] = useState<boolean>(false);
+  const [otp, setOtp] = useState<string>('');
+  const [showOtp, setShowOtp] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+  const [localError, setLocalError] = useState<string>('');
   
-  const { login } = useAuth();
+  const { 
+    generateOtp, 
+    validateOtp, 
+    otpStep, 
+    currentEmail, 
+    error: authError, 
+    isLoading: authLoading 
+  } = useAuth();
+  
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Check for OAuth success message
+  const oauthMessage = location.state?.message;
+
+  // Sync loading state with auth context
+  useEffect(() => {
+    setIsLoading(authLoading);
+  }, [authLoading]);
+
+  // Handle auth errors
+  useEffect(() => {
+    if (authError) {
+      setLocalError(authError);
+    }
+  }, [authError]);
+
+  // Navigate to dashboard on successful authentication
+  useEffect(() => {
+    if (otpStep === 'success') {
+      navigate('/dashboard');
+    }
+  }, [otpStep, navigate]);
 
   /**
-   * Handle form submission
-   * @param e - Form event
+   * Handle email submission and OTP generation
    */
-  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
+  const handleEmailSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
-    setError('');
-    setIsLoading(true);
+    setLocalError('');
+    
+    if (!email.trim()) {
+      setLocalError('Please enter your email address');
+      return;
+    }
 
-    try {
-      const success = await login(email, password);
-      if (success) {
-        navigate('/dashboard');
-      } else {
-        setError('Invalid email or password. Try demo@example.com / password');
-      }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
+    const success = await generateOtp(email);
+    if (!success) {
+      setLocalError('Failed to generate OTP. Please try again.');
     }
   };
 
   /**
-   * Handle demo login
+   * Handle OTP validation
    */
-  const handleDemoLogin = async (): Promise<void> => {
-    setEmail('demo@example.com');
-    setPassword('password');
-    setError('');
-    setIsLoading(true);
+  const handleOtpSubmit = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    setLocalError('');
+    
+    if (!otp.trim() || otp.length !== 6) {
+      setLocalError('Please enter a valid 6-digit OTP');
+      return;
+    }
 
-    try {
-      const success = await login('demo@example.com', 'password');
-      if (success) {
-        navigate('/dashboard');
-      }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
+    const success = await validateOtp(currentEmail || email, otp);
+    if (!success) {
+      setLocalError('Invalid OTP. Please try again.');
+    }
+  };
+
+  /**
+   * Go back to email step
+   */
+  const handleBackToEmail = (): void => {
+    setOtp('');
+    setLocalError('');
+    // Reset auth context step
+    window.location.reload(); // Simple way to reset the flow
+  };
+
+  /**
+   * Resend OTP
+   */
+  const handleResendOtp = async (): Promise<void> => {
+    setLocalError('');
+    const success = await generateOtp(currentEmail || email);
+    if (!success) {
+      setLocalError('Failed to resend OTP. Please try again.');
     }
   };
 
@@ -84,154 +127,173 @@ const LoginPage: React.FC = () => {
         <div className="bg-gray-800 rounded-xl border border-gray-700 p-8">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-white">
-              Welcome back
+              {otpStep === 'email' ? 'Welcome back' : 'Enter OTP'}
             </h2>
             <p className="text-gray-400">
-              Sign in to your account to continue
+              {otpStep === 'email' 
+                ? 'Sign in to your account to continue' 
+                : `We've sent a 6-digit code to ${currentEmail}`
+              }
             </p>
           </div>
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {/* Email field */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                Email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-3 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your email"
-                />
+          {/* OAuth Success Message */}
+          {oauthMessage && (
+            <div className="bg-green-900/20 border border-green-800 rounded-lg p-4 mb-6">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                <p className="text-sm text-green-400">{oauthMessage}</p>
               </div>
             </div>
+          )}
 
-            {/* Password field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+          {/* Email Step */}
+          {otpStep === 'email' && (
+            <form className="space-y-6" onSubmit={handleEmailSubmit}>
+              {/* Email field */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                  Email
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-3 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Enter your email"
+                  />
                 </div>
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your password"
-                />
+              </div>
+
+              {/* Error message */}
+              {localError && (
+                <div className="bg-red-900/20 border border-red-800 rounded-lg p-3">
+                  <p className="text-sm text-red-400">{localError}</p>
+                </div>
+              )}
+
+              {/* Generate OTP button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full btn-primary flex items-center justify-center"
+              >
+                {isLoading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  <>
+                    Generate OTP
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* OTP Step */}
+          {otpStep === 'otp' && (
+            <form className="space-y-6" onSubmit={handleOtpSubmit}>
+              {/* OTP field */}
+              <div>
+                <label htmlFor="otp" className="block text-sm font-medium text-gray-300 mb-2">
+                  OTP Code
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MessageSquare className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="otp"
+                    name="otp"
+                    type={showOtp ? 'text' : 'password'}
+                    autoComplete="one-time-code"
+                    required
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    maxLength={6}
+                    className="w-full pl-10 pr-10 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 text-center text-lg tracking-widest"
+                    placeholder="000000"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowOtp(!showOtp)}
+                  >
+                    {showOtp ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-gray-400">
+                  Enter the 6-digit code sent to your email
+                </p>
+              </div>
+
+              {/* Error message */}
+              {localError && (
+                <div className="bg-red-900/20 border border-red-800 rounded-lg p-3">
+                  <p className="text-sm text-red-400">{localError}</p>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="space-y-3">
                 <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full btn-primary flex items-center justify-center"
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                  {isLoading ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <>
+                      Verify OTP
+                      <CheckCircle className="ml-2 h-4 w-4" />
+                    </>
                   )}
                 </button>
-              </div>
-            </div>
 
-            {/* Remember me and forgot password */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-600 rounded bg-gray-700"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-300">
-                  Remember me
-                </label>
-              </div>
-              <div className="text-sm">
-                <Link
-                  to="/forgot-password"
-                  className="font-medium text-primary-400 hover:text-primary-300 transition-colors"
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-center px-4 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white hover:bg-gray-600 transition-colors duration-200"
                 >
-                  Forgot password?
-                </Link>
+                  Resend OTP
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleBackToEmail}
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-center px-4 py-3 text-gray-400 hover:text-white transition-colors duration-200"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Email
+                </button>
               </div>
+            </form>
+          )}
+
+          {/* Loading Step */}
+          {otpStep === 'loading' && (
+            <div className="text-center space-y-6">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto"></div>
+              <p className="text-gray-400">
+                {currentEmail ? 'Verifying OTP...' : 'Generating OTP...'}
+              </p>
             </div>
-
-            {/* Error message */}
-            {error && (
-              <div className="bg-red-900/20 border border-red-800 rounded-lg p-3">
-                <p className="text-sm text-red-400">{error}</p>
-              </div>
-            )}
-
-            {/* Sign in button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full btn-primary flex items-center justify-center"
-            >
-              {isLoading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <>
-                  Sign in
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* Separator */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-600"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-800 text-gray-400">OR CONTINUE WITH</span>
-            </div>
-          </div>
-
-          {/* Google sign in */}
-          <button
-            onClick={handleDemoLogin}
-            disabled={isLoading}
-            className="w-full flex items-center justify-center px-4 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white hover:bg-gray-600 transition-colors duration-200"
-          >
-            <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center mr-3">
-              <span className="text-sm font-bold text-gray-700">G</span>
-            </div>
-            Continue with Google
-          </button>
-
-          {/* Sign up link */}
-          <div className="text-center mt-6">
-            <p className="text-sm text-gray-400">
-              Don't have an account?{' '}
-              <Link
-                to="/signup"
-                className="font-medium text-primary-400 hover:text-primary-300 transition-colors"
-              >
-                Sign up
-              </Link>
-            </p>
-          </div>
+          )}
         </div>
 
         {/* Footer */}

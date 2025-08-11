@@ -98,6 +98,13 @@ A modern, scalable React-based frontend for an Instagram Automation Platform tha
 
 ### Account Management
 - **Connect Accounts**: Instagram Business account connection via OAuth
+
+### Automation Management
+- **Automation List**: View and manage all automations with real-time API integration
+- **Search & Filter**: Debounced search with status and type filtering
+- **Toggle Status**: Activate/deactivate automations with API calls
+- **Duplicate/Delete**: Full CRUD operations for automations
+- **Real-time Updates**: Live status updates and error handling
 - **Multi-Platform**: Support for Facebook (active), WhatsApp, LinkedIn (coming soon)
 - **Account Status**: Connection status and management options
 - **Account Switcher**: Easy switching between multiple connected accounts

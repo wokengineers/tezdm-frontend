@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -21,6 +21,8 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { mockData, Account } from '../constants/mockApi';
+import { profileApi } from '../services/profileApi';
+import { SecurityManager } from '../utils/securityManager';
 
 /**
  * Custom sidebar toggle icon component
@@ -78,11 +80,40 @@ const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
-  const [activeAccount, setActiveAccount] = useState<string>('acc1');
+  const [connectedAccounts, setConnectedAccounts] = useState<any[]>([]);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState<boolean>(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, signout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+
+  // Get connected Instagram account from real API data
+  const connectedAccount = connectedAccounts.find(account => 
+    account.platform === 'instagram' && (account.state === 'connected' || account.state === 'token_available')
+  );
+
+  /**
+   * Fetch connected accounts from API
+   */
+  useEffect(() => {
+    const fetchConnectedAccounts = async () => {
+      try {
+        setIsLoadingAccounts(true);
+        const tokens = SecurityManager.getTokens();
+        if (tokens && tokens.group_id) {
+          const response = await profileApi.getConnectedAccounts(tokens.group_id, 1);
+          setConnectedAccounts(response.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch connected accounts:', error);
+        setConnectedAccounts([]);
+      } finally {
+        setIsLoadingAccounts(false);
+      }
+    };
+
+    fetchConnectedAccounts();
+  }, []);
 
   /**
    * Navigation items configuration
@@ -91,9 +122,15 @@ const Layout: React.FC = () => {
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Automations', path: '/automations', icon: Zap },
     { name: 'Analytics', path: '/analytics', icon: BarChart3 },
-    { name: 'Activity Log', path: '/activity', icon: Activity },
+    // { name: 'Activity Log', path: '/activity', icon: Activity }, // Hidden for future use
     { name: 'Billing', path: '/billing', icon: CreditCard },
-    { name: 'Settings', path: '/settings', icon: Settings },
+    { 
+      name: connectedAccount ? 'Connected Accounts' : 'Connect Account', 
+      path: '/connect-accounts', 
+      icon: Instagram,
+      badge: connectedAccount ? 'Connected' : 'Connect'
+    },
+    // { name: 'Settings', path: '/settings', icon: Settings }, // Removed
     { name: 'Help & Support', path: '/help', icon: HelpCircle },
   ];
 
@@ -109,8 +146,8 @@ const Layout: React.FC = () => {
   /**
    * Handle logout
    */
-  const handleLogout = (): void => {
-    logout();
+  const handleLogout = async (): Promise<void> => {
+    await signout();
     navigate('/login');
   };
 
@@ -131,38 +168,13 @@ const Layout: React.FC = () => {
   };
 
   /**
-   * Handle account switching
-   * @param accountId - Account ID to switch to
+   * Handle connect account navigation
    */
-  const handleAccountSwitch = (accountId: string): void => {
-    setActiveAccount(accountId);
+  const handleConnectAccount = (): void => {
+    navigate('/connect-accounts');
   };
 
-  /**
-   * Get platform icon
-   * @param platform - Platform name
-   * @returns Platform icon component
-   */
-  const getPlatformIcon = (platform: string) => {
-    switch (platform) {
-      case 'instagram':
-        return <Instagram className="w-3 h-3" />;
-      case 'facebook':
-        return <div className="w-3 h-3 bg-white rounded-sm flex items-center justify-center">
-          <span className="text-blue-600 text-xs font-bold">f</span>
-        </div>;
-      case 'whatsapp':
-        return <div className="w-3 h-3 bg-white rounded-sm flex items-center justify-center">
-          <span className="text-green-500 text-xs font-bold">W</span>
-        </div>;
-      case 'linkedin':
-        return <div className="w-3 h-3 bg-white rounded-sm flex items-center justify-center">
-          <span className="text-blue-700 text-xs font-bold">in</span>
-        </div>;
-      default:
-        return <User className="w-3 h-3" />;
-    }
-  };
+
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
@@ -174,86 +186,9 @@ const Layout: React.FC = () => {
         />
       )}
 
-      {/* Account Switcher Panel */}
+      {/* Navigation Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 bg-gray-900 border-r border-gray-700 transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
-        w-16
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
-        <div className="flex flex-col h-full">
-          {/* Connected accounts */}
-          <div className="flex-1 py-4 space-y-3">
-            {mockData.connectedAccounts.map((account) => (
-              <button
-                key={account.id}
-                onClick={() => handleAccountSwitch(account.id)}
-                className={`
-                  relative w-10 h-10 mx-auto rounded-lg border-2 transition-all duration-200 group flex items-center justify-center
-                  ${activeAccount === account.id 
-                    ? 'border-primary-500 bg-primary-500/10' 
-                    : 'border-gray-600 hover:border-gray-500'
-                  }
-                  ${!account.isActive && 'opacity-50'}
-                `}
-                title={`${account.username} (${account.platform})`}
-              >
-                {account.avatar ? (
-                  <img
-                    src={account.avatar}
-                    alt={account.username}
-                    className="w-full h-full rounded-lg object-cover"
-                  />
-                ) : (
-                  // Fallback avatar with initials and color
-                  <div className={`
-                    w-full h-full rounded-lg flex items-center justify-center text-white font-semibold text-sm
-                    ${account.platform === 'instagram' ? 'bg-pink-500' : 
-                      account.platform === 'facebook' ? 'bg-blue-600' :
-                      account.platform === 'whatsapp' ? 'bg-green-500' :
-                      account.platform === 'linkedin' ? 'bg-blue-700' : 'bg-gray-600'
-                    }
-                  `}>
-                    {account.username.charAt(1).toUpperCase()}
-                  </div>
-                )}
-                {/* Platform indicator */}
-                <div className={`
-                  absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-gray-900 flex items-center justify-center
-                  ${account.platform === 'instagram' ? 'bg-pink-500' : 
-                    account.platform === 'facebook' ? 'bg-blue-600' :
-                    account.platform === 'whatsapp' ? 'bg-green-500' :
-                    account.platform === 'linkedin' ? 'bg-blue-700' : 'bg-gray-500'
-                  }
-                `}>
-                  {getPlatformIcon(account.platform)}
-                </div>
-                {/* Primary account indicator */}
-                {account.isPrimary && (
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border border-gray-900"></div>
-                )}
-                {/* Active account indicator */}
-                {activeAccount === account.id && (
-                  <div className="absolute inset-0 rounded-lg ring-2 ring-primary-500 ring-offset-2 ring-offset-gray-900"></div>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Add account button */}
-          <div className="p-3 border-t border-gray-700">
-            <button
-              className="w-10 h-10 mx-auto rounded-lg border-2 border-dashed border-gray-600 hover:border-gray-500 flex items-center justify-center text-gray-400 hover:text-gray-300 transition-colors"
-              title="Add new account"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Sidebar */}
-      <div className={`
-        fixed inset-y-0 left-16 z-40 bg-white dark:bg-gray-800 shadow-lg transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
+        fixed inset-y-0 left-0 z-50 bg-white dark:bg-gray-800 shadow-lg transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
         ${sidebarCollapsed ? 'w-16' : 'w-64'}
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
@@ -291,12 +226,28 @@ const Layout: React.FC = () => {
                 `}
                 title={sidebarCollapsed ? item.name : undefined}
               >
-                <Icon className="w-5 h-5 flex-shrink-0" />
+                <div className="relative">
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  {/* Connection status indicator for collapsed state */}
+                  {sidebarCollapsed && item.badge && (
+                    <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${
+                      item.badge === 'Connected' 
+                        ? 'bg-green-500' 
+                        : 'bg-yellow-500'
+                    }`}></div>
+                  )}
+                </div>
                 {!sidebarCollapsed && (
                   <>
                     <span className="font-medium ml-3 truncate">{item.name}</span>
                     {item.badge && (
-                      <span className="ml-auto badge badge-info">{item.badge}</span>
+                      <span className={`ml-auto badge ${
+                        item.badge === 'Connected' 
+                          ? 'badge-success' 
+                          : 'badge-warning'
+                      }`}>
+                        {item.badge}
+                      </span>
                     )}
                   </>
                 )}
@@ -304,6 +255,15 @@ const Layout: React.FC = () => {
                 {sidebarCollapsed && (
                   <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                     {item.name}
+                    {item.badge && (
+                      <div className={`mt-1 text-xs ${
+                        item.badge === 'Connected' 
+                          ? 'text-green-400' 
+                          : 'text-yellow-400'
+                      }`}>
+                        {item.badge}
+                      </div>
+                    )}
                   </div>
                 )}
               </button>
@@ -397,6 +357,42 @@ const Layout: React.FC = () => {
                 {/* User dropdown */}
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                    {/* Instagram Connection Status */}
+                    <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                          Instagram Account
+                        </span>
+                        {connectedAccount ? (
+                          <div className="flex items-center space-x-1">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-xs text-green-600 dark:text-green-400">Connected</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-1">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">Not Connected</span>
+                          </div>
+                        )}
+                      </div>
+                      {connectedAccount && (
+                        <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 truncate">
+                          @{connectedAccount.username}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        navigate('/connect-accounts');
+                        setUserMenuOpen(false);
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <Instagram className="w-4 h-4 mr-3" />
+                      {connectedAccount ? 'Manage Account' : 'Connect Instagram'}
+                    </button>
+                    
                     <button
                       onClick={() => {
                         navigate('/settings');
@@ -407,6 +403,7 @@ const Layout: React.FC = () => {
                       <Settings className="w-4 h-4 mr-3" />
                       Settings
                     </button>
+                    
                     <button
                       onClick={handleLogout}
                       className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
