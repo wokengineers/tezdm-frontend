@@ -1,5 +1,8 @@
 import { secureApi } from './secureApi';
 
+// Constants
+const PRODUCT_CODE = 'tezdm';
+
 // Type definitions
 interface ApiResponse<T> {
   status: number;
@@ -53,14 +56,14 @@ export const profileApi = {
    * Get available OAuth platforms
    */
   async getOAuthPlatforms(): Promise<ApiResponse<Platform[]>> {
-    return this.makeRequest<Platform[]>('/profile/oauth/');
+    return this.makeRequest<Platform[]>(`/profile/oauth/?product_code=${PRODUCT_CODE}`);
   },
 
   /**
    * Get OAuth URL for specific platform
    */
   async getOAuthUrl(platformId: number, groupId: number): Promise<ApiResponse<OAuthUrlResponse>> {
-    return this.makeRequest<OAuthUrlResponse>(`/profile/oauth/${platformId}/?group_id=${groupId}`);
+    return this.makeRequest<OAuthUrlResponse>(`/profile/oauth/${platformId}/?group_id=${groupId}&product_code=${PRODUCT_CODE}`);
   },
 
 
@@ -71,7 +74,7 @@ export const profileApi = {
   async completeOAuthRedirect(code: string, state: string): Promise<ApiResponse<void>> {
     const payload: OAuthRedirectRequest = { code, state };
     
-    return this.makeRequest<void>('/profile/oauth/auth_redirection/', {
+    return this.makeRequest<void>(`/profile/oauth/auth_redirection/?product_code=${PRODUCT_CODE}`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });

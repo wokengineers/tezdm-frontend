@@ -32,6 +32,8 @@ interface Automation {
   is_active: boolean;
   events: Event[];
   profile_info_id: number;
+  creation_date?: string;
+  updation_date?: string;
 }
 
 interface AutomationFilters {
@@ -63,7 +65,7 @@ export interface PostsResponse {
 // Trigger and Action labels mapping
 export const TRIGGER_LABELS: { [key: string]: string } = {
   'post_comment': 'Post Comment',
-  'story_mention': 'Story Mention',
+  'story_reply': 'Story Reply',
   'user_direct_message': 'User Direct Message'
 };
 
@@ -207,12 +209,50 @@ export const automationApi = {
     });
   },
 
-  async getPosts(profileInfoId: number, nextCursor?: string): Promise<ApiResponse<InstagramPost[]>> {
-    const url = nextCursor 
-      ? `/tezdm/workflow/get_instagram_posts/?profile_info_id=${profileInfoId}&next_cursor=${nextCursor}`
-      : `/tezdm/workflow/get_instagram_posts/?profile_info_id=${profileInfoId}`;
+  async getPosts(profileInfoId: number, groupId: number, nextCursor?: string): Promise<ApiResponse<InstagramPost[]>> {
+    const params = new URLSearchParams();
+    params.append('profile_info_id', profileInfoId.toString());
+    params.append('group_id', groupId.toString());
     
-    return this.makeRequest<InstagramPost[]>(url);
+    if (nextCursor) {
+      params.append('next_cursor', nextCursor);
+    }
+    
+    const url = `/tezdm/workflow/get_instagram_posts/?${params.toString()}`;
+    console.log('📸 API URL:', url);
+    console.log('📸 API Parameters:', { profileInfoId, groupId, nextCursor });
+    
+    try {
+      const response = await this.makeRequest<InstagramPost[]>(url);
+      console.log('📸 API Response:', response);
+      return response;
+    } catch (error) {
+      console.error('📸 API Error:', error);
+      throw error;
+    }
+  },
+
+  async getStories(profileInfoId: number, groupId: number, nextCursor?: string): Promise<ApiResponse<any[]>> {
+    const params = new URLSearchParams();
+    params.append('profile_info_id', profileInfoId.toString());
+    params.append('group_id', groupId.toString());
+    
+    if (nextCursor) {
+      params.append('next_cursor', nextCursor);
+    }
+    
+    const url = `/tezdm/workflow/get_instagram_stories/?${params.toString()}`;
+    console.log('📸 Stories API URL:', url);
+    console.log('📸 Stories API Parameters:', { profileInfoId, groupId, nextCursor });
+    
+    try {
+      const response = await this.makeRequest<any[]>(url);
+      console.log('📸 Stories API Response:', response);
+      return response;
+    } catch (error) {
+      console.error('📸 Stories API Error:', error);
+      throw error;
+    }
   },
 };
 

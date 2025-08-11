@@ -165,23 +165,21 @@ const AutomationListPage: React.FC = () => {
    * @returns Flow description string
    */
   const getFlowDescription = (automation: Automation) => {
+    // Get trigger information
     const triggerEvent = automation.events.find(event => event.event_type === 'trigger');
-    if (triggerEvent) {
-      const category = triggerEvent.event_category;
-      switch (category) {
-        case 'post_comment':
-          return 'Comment → Reply';
-        case 'story_reply':
-          return 'Story → Reply';
-        case 'story_mention':
-          return 'Story Mention → Reply';
-        case 'dm_reply':
-          return 'DM → Reply';
-        default:
-          return `${category} → Reply`;
-      }
-    }
-    return 'Automation';
+    const triggerLabel = triggerEvent ? TRIGGER_LABELS[triggerEvent.event_category] || triggerEvent.event_category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown Trigger';
+    
+    // Get last updated date
+    const lastUpdated = automation.updation_date || automation.creation_date;
+    const formattedDate = lastUpdated ? new Date(lastUpdated).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }) : 'Unknown Date';
+    
+    return `${triggerLabel} • Last updated: ${formattedDate}`;
   };
 
   /**
@@ -293,7 +291,7 @@ const AutomationListPage: React.FC = () => {
             className="btn-primary flex items-center"
           >
             <Plus className="w-4 h-4 mr-2" />
-            + Create Automation
+            Create Automation
           </button>
         </div>
       </div>
@@ -510,7 +508,7 @@ const AutomationListPage: React.FC = () => {
                       className="btn-primary flex items-center"
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      + Create Automation
+                      Create Automation
                     </button>
                   </div>
                 )}

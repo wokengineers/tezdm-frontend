@@ -3,6 +3,8 @@
  * Handles token management, data integrity, and secure storage
  */
 
+import { PRODUCTION_CONFIG } from '../config/api';
+
 // Types
 interface StoredDataMeta {
   data: any;
@@ -43,10 +45,10 @@ interface UserData {
  */
 export class SecurityManager {
   private static readonly APP_VERSION = '1.0.0';
-  private static readonly MAX_DATA_AGE = parseInt(process.env.REACT_APP_MAX_DATA_AGE || '86400000'); // 24 hours
-  private static readonly TOKEN_REFRESH_THRESHOLD = parseInt(process.env.REACT_APP_TOKEN_REFRESH_THRESHOLD || '300000'); // 5 minutes before expiry
+  private static readonly MAX_DATA_AGE = PRODUCTION_CONFIG.MAX_DATA_AGE; // 24 hours
+  private static readonly TOKEN_REFRESH_THRESHOLD = PRODUCTION_CONFIG.TOKEN_REFRESH_THRESHOLD; // 5 minutes before expiry
   private static readonly ENCRYPTION_KEY = process.env.REACT_APP_ENCRYPTION_KEY || 'tezdm_secure_key_2024'; // In production, use environment variable
-  private static readonly ENABLE_SECURITY_LOGGING = process.env.REACT_APP_ENABLE_SECURITY_LOGGING === 'true';
+  private static readonly ENABLE_SECURITY_LOGGING = PRODUCTION_CONFIG.ENABLE_SECURITY_LOGGING;
 
   /**
    * Generate a hash for data integrity

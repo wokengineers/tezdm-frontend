@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -21,6 +21,8 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { mockData, Account } from '../constants/mockApi';
+import { profileApi } from '../services/profileApi';
+import { SecurityManager } from '../utils/securityManager';
 
 /**
  * Custom sidebar toggle icon component
@@ -78,15 +80,40 @@ const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
+  const [connectedAccounts, setConnectedAccounts] = useState<any[]>([]);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState<boolean>(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
 
-  // Get connected Instagram account (only one for phase 1)
-  const connectedAccount = mockData.connectedAccounts.find(account => 
-    account.platform === 'instagram' && account.isActive
+  // Get connected Instagram account from real API data
+  const connectedAccount = connectedAccounts.find(account => 
+    account.platform === 'instagram' && (account.state === 'connected' || account.state === 'token_available')
   );
+
+  /**
+   * Fetch connected accounts from API
+   */
+  useEffect(() => {
+    const fetchConnectedAccounts = async () => {
+      try {
+        setIsLoadingAccounts(true);
+        const tokens = SecurityManager.getTokens();
+        if (tokens && tokens.group_id) {
+          const response = await profileApi.getConnectedAccounts(tokens.group_id, 1);
+          setConnectedAccounts(response.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch connected accounts:', error);
+        setConnectedAccounts([]);
+      } finally {
+        setIsLoadingAccounts(false);
+      }
+    };
+
+    fetchConnectedAccounts();
+  }, []);
 
   /**
    * Navigation items configuration
@@ -95,7 +122,7 @@ const Layout: React.FC = () => {
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Automations', path: '/automations', icon: Zap },
     { name: 'Analytics', path: '/analytics', icon: BarChart3 },
-    { name: 'Activity Log', path: '/activity', icon: Activity },
+    // { name: 'Activity Log', path: '/activity', icon: Activity }, // Hidden for future use
     { name: 'Billing', path: '/billing', icon: CreditCard },
     { 
       name: connectedAccount ? 'Connected Accounts' : 'Connect Account', 
@@ -103,7 +130,7 @@ const Layout: React.FC = () => {
       icon: Instagram,
       badge: connectedAccount ? 'Connected' : 'Connect'
     },
-    { name: 'Settings', path: '/settings', icon: Settings },
+    // { name: 'Settings', path: '/settings', icon: Settings }, // Removed
     { name: 'Help & Support', path: '/help', icon: HelpCircle },
   ];
 

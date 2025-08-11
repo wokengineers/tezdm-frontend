@@ -13,6 +13,8 @@ const OAuthRedirectPage: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   
+  console.log('OAuthRedirectPage - Initial auth status:', { isAuthenticated });
+  
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -53,19 +55,11 @@ const OAuthRedirectPage: React.FC = () => {
       setStatus('success');
       setMessage('Account connected successfully!');
 
-      // Redirect based on authentication status
+      // After successful OAuth completion, user should be authenticated
+      // Force redirect to automations since they just connected an account
       setTimeout(() => {
-        if (isAuthenticated) {
-          // User is logged in - redirect to automations
-          navigate('/automations');
-        } else {
-          // User is not logged in - redirect to login with message
-          navigate('/login', { 
-            state: { 
-              message: 'Profile has been added to TezDM! Login to your TezDM account to setup DM automation.' 
-            } 
-          });
-        }
+        console.log('OAuth redirect - Successfully completed, redirecting to /automations');
+        navigate('/automations');
       }, 2000);
 
     } catch (error) {

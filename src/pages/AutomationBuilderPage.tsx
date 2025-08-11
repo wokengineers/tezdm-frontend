@@ -21,6 +21,7 @@ import { profileApi } from '../services/profileApi';
 import LoadingButton from '../components/LoadingButton';
 import { getEventForm } from '../components/automation/EventForms';
 import InstagramPostSelector from '../components/automation/InstagramPostSelector';
+import InstagramStorySelector from '../components/automation/InstagramStorySelector';
 import { v4 as uuidv4 } from 'uuid';
 
 // Import validation types
@@ -96,7 +97,7 @@ const AutomationBuilderPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [previewMode, setPreviewMode] = useState<boolean>(false);
-  const [actionFlowType, setActionFlowType] = useState<'sequential' | 'parallel'>('sequential');
+  const [actionFlowType, setActionFlowType] = useState<'sequential' | 'parallel'>('parallel');
   
   // New state for trigger-action configuration
   const [triggerActionConfig, setTriggerActionConfig] = useState<TriggerActionConfig | null>(null);
@@ -111,6 +112,10 @@ const AutomationBuilderPage: React.FC = () => {
   // State for Instagram post selector
   const [isPostSelectorOpen, setIsPostSelectorOpen] = useState<boolean>(false);
   const [currentEventForPostSelection, setCurrentEventForPostSelection] = useState<string | null>(null);
+
+  // State for Instagram story selector
+  const [isStorySelectorOpen, setIsStorySelectorOpen] = useState<boolean>(false);
+  const [currentEventForStorySelection, setCurrentEventForStorySelection] = useState<string | null>(null);
 
   // Initialize workflow data for edit mode
   useEffect(() => {
@@ -268,7 +273,7 @@ const AutomationBuilderPage: React.FC = () => {
     switch (triggerId) {
       case 'post_comment':
         return MessageCircle;
-      case 'story_mention':
+      case 'story_reply':
         return Image;
       case 'user_direct_message':
         return Send;
@@ -284,8 +289,8 @@ const AutomationBuilderPage: React.FC = () => {
     switch (triggerId) {
       case 'post_comment':
         return 'When someone comments on a post';
-      case 'story_mention':
-        return 'When someone mentions you in a story';
+      case 'story_reply':
+        return 'When someone replies to your story';
       case 'user_direct_message':
         return 'When someone sends you a direct message';
       default:
@@ -363,10 +368,14 @@ const AutomationBuilderPage: React.FC = () => {
           post_ids: [],
           all_posts: true
         };
-      case 'story_mention':
+      case 'story_reply':
         return {
           story_ids: [],
-          all_stories: true
+          all_stories: true,
+          keywords: [],
+          fuzzy_match_allowed: null,
+          fuzzy_match_percentage: null,
+          all_messages: true
         };
       case 'user_direct_message':
         return {
@@ -424,6 +433,23 @@ const AutomationBuilderPage: React.FC = () => {
   const handleClosePostSelector = () => {
     setIsPostSelectorOpen(false);
     setCurrentEventForPostSelection(null);
+  };
+
+  const handleOpenStorySelector = (eventTempId: string) => {
+    setCurrentEventForStorySelection(eventTempId);
+    setIsStorySelectorOpen(true);
+  };
+
+  const handleStorySelection = (storyIds: string[]) => {
+    if (currentEventForStorySelection) {
+      updateEventConfig(currentEventForStorySelection, { story_ids: storyIds });
+      setCurrentEventForStorySelection(null);
+    }
+  };
+
+  const handleCloseStorySelector = () => {
+    setIsStorySelectorOpen(false);
+    setCurrentEventForStorySelection(null);
   };
 
   /**
@@ -576,8 +602,8 @@ const AutomationBuilderPage: React.FC = () => {
     setError(null);
 
     try {
-      const groupId = getGroupId();
-      if (!groupId) {
+    const groupId = getGroupId();
+    if (!groupId) {
         throw new Error('Group ID not found');
       }
 
@@ -672,7 +698,7 @@ const AutomationBuilderPage: React.FC = () => {
       } else {
         console.log('Creating automation with payload:', payload);
         const response = await automationApi.createWorkflow(payload);
-        console.log('Automation created successfully:', response);
+      console.log('Automation created successfully:', response);
       }
 
       // Redirect to automations list
@@ -720,33 +746,34 @@ const AutomationBuilderPage: React.FC = () => {
     switch (currentStep) {
       case 1:
         return <BasicInfoStep workflow={workflow} setWorkflow={setWorkflow} />;
-              case 2:
-          return <TriggerStep 
-            onAddTrigger={addTriggerEvent} 
-            workflow={workflow} 
-            updateEventConfig={updateEventConfig} 
-            setWorkflow={setWorkflow} 
-            getAvailableActions={getAvailableActions} 
-            validationErrors={validationErrors}
-            onOpenPostSelector={handleOpenPostSelector}
-            connectedAccount={connectedAccount}
-          />;
-              case 3:
-          return (
-            <ActionsStep
-              workflow={workflow}
-              actionFlowType={actionFlowType}
-              setActionFlowType={setActionFlowType}
-              onAddAction={addActionEvent}
-              updateEventConfig={updateEventConfig}
-              removeEvent={removeEvent}
-              reorderActions={reorderActions}
+      case 2:
+          return         <TriggerStep
+          onAddTrigger={addTriggerEvent}
+          workflow={workflow}
+          updateEventConfig={updateEventConfig}
+          setWorkflow={setWorkflow}
+          getAvailableActions={getAvailableActions}
+          validationErrors={validationErrors}
+          onOpenPostSelector={handleOpenPostSelector}
+          onOpenStorySelector={handleOpenStorySelector}
+          connectedAccount={connectedAccount}
+        />;
+      case 3:
+        return (
+          <ActionsStep 
+            workflow={workflow}
+            actionFlowType={actionFlowType}
+            setActionFlowType={setActionFlowType}
+            onAddAction={addActionEvent}
+            updateEventConfig={updateEventConfig}
+            removeEvent={removeEvent}
+            reorderActions={reorderActions}
               getAvailableActions={getAvailableActions}
               isActionConflicting={isActionConflicting}
               validationErrors={validationErrors}
-            />
-          );
-              case 4:
+          />
+        );
+      case 4:
           return <ReviewStep workflow={workflow} updateEventConfig={updateEventConfig} removeEvent={removeEvent} validationErrors={validationErrors} />;
       default:
         return null;
@@ -798,12 +825,29 @@ const AutomationBuilderPage: React.FC = () => {
               }
               break;
               
-            case 'story_mention':
+            case 'story_reply':
+              // Story validation
               if (config.all_stories && config.story_ids && config.story_ids.length > 0) {
                 errors.push({ field: 'stories', message: 'Choose either all stories or specific stories, not both' });
               }
               if (!config.all_stories && (!config.story_ids || config.story_ids.length === 0)) {
                 errors.push({ field: 'stories', message: 'Please select stories to monitor' });
+              }
+              
+              // Message validation
+              if (config.all_messages && config.keywords && config.keywords.length > 0) {
+                errors.push({ field: 'messages', message: 'Choose either all messages or keywords, not both' });
+              }
+              if (!config.all_messages && (!config.keywords || config.keywords.length === 0)) {
+                errors.push({ field: 'messages', message: 'Please add keywords or select all messages' });
+              }
+              
+              // Fuzzy match validation
+              if (config.fuzzy_match_allowed && !config.fuzzy_match_percentage) {
+                errors.push({ field: 'fuzzy_match_percentage', message: 'Fuzzy match percentage is required' });
+              }
+              if (config.fuzzy_match_percentage && (config.fuzzy_match_percentage < 0 || config.fuzzy_match_percentage > 100)) {
+                errors.push({ field: 'fuzzy_match_percentage', message: 'Percentage must be between 0 and 100' });
               }
               break;
               
@@ -901,7 +945,7 @@ const AutomationBuilderPage: React.FC = () => {
 
     // If basic check fails, return false
     if (!basicCheck) {
-      return false;
+        return false;
     }
 
     // Now validate form data
@@ -946,7 +990,7 @@ const AutomationBuilderPage: React.FC = () => {
     if (stepNumber >= 1 && stepNumber <= steps.length) {
       // Allow going back to any previous step
       if (stepNumber <= currentStep) {
-        setCurrentStep(stepNumber);
+      setCurrentStep(stepNumber);
       }
       // Don't allow going forward to incomplete steps
       // Users must complete each step in order
@@ -992,12 +1036,12 @@ const AutomationBuilderPage: React.FC = () => {
               const isClickable = step.id <= currentStep; // Only allow clicking on completed or current step
               
               return (
-                <div key={step.id} className="flex items-center">
-                  <button
-                    onClick={() => navigateToStep(step.id)}
+              <div key={step.id} className="flex items-center">
+                <button
+                  onClick={() => navigateToStep(step.id)}
                     disabled={!isClickable}
                     title={!isClickable ? `Complete step ${currentStep} first` : `Go to step ${step.id}`}
-                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${
+                  className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${
                       isCompleted
                         ? 'bg-primary-500 border-primary-500 text-white hover:bg-primary-600 cursor-pointer'
                         : isCurrent
@@ -1006,27 +1050,27 @@ const AutomationBuilderPage: React.FC = () => {
                     }`}
                   >
                     {isCompleted ? (
-                      <CheckCircle className="w-5 h-5" />
-                    ) : (
-                      <span className="text-sm font-medium">{step.id}</span>
-                    )}
-                  </button>
-                  <div className="ml-3">
-                    <p className={`text-sm font-medium ${
-                      isCompleted || isCurrent
-                        ? 'text-gray-900 dark:text-white'
-                        : 'text-gray-500'
-                    }`}>
-                      {step.title}
-                    </p>
-                    <p className="text-xs text-gray-500">{step.description}</p>
-                  </div>
-                  {index < steps.length - 1 && (
-                    <div className={`w-16 h-0.5 mx-4 ${
-                      isCompleted ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
-                    }`} />
+                    <CheckCircle className="w-5 h-5" />
+                  ) : (
+                    <span className="text-sm font-medium">{step.id}</span>
                   )}
+                </button>
+                <div className="ml-3">
+                  <p className={`text-sm font-medium ${
+                      isCompleted || isCurrent
+                      ? 'text-gray-900 dark:text-white'
+                      : 'text-gray-500'
+                  }`}>
+                    {step.title}
+                  </p>
+                  <p className="text-xs text-gray-500">{step.description}</p>
                 </div>
+                {index < steps.length - 1 && (
+                  <div className={`w-16 h-0.5 mx-4 ${
+                      isCompleted ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`} />
+                )}
+              </div>
               );
             })}
           </div>
@@ -1133,13 +1177,26 @@ const AutomationBuilderPage: React.FC = () => {
         )}
 
         {/* Instagram Post Selector */}
-        {isPostSelectorOpen && currentEventForPostSelection && connectedAccount && (
+        {isPostSelectorOpen && currentEventForPostSelection && connectedAccount && getGroupId() && (
           <InstagramPostSelector
             isOpen={isPostSelectorOpen}
             onClose={handleClosePostSelector}
             onSelect={handlePostSelection}
             profileInfoId={connectedAccount.id}
+            groupId={getGroupId()!}
             selectedPostIds={workflow.events.find(e => e.temp_id === currentEventForPostSelection)?.event_config.post_ids || []}
+          />
+        )}
+
+        {/* Instagram Story Selector */}
+        {isStorySelectorOpen && currentEventForStorySelection && connectedAccount && getGroupId() && (
+          <InstagramStorySelector
+            isOpen={isStorySelectorOpen}
+            onClose={handleCloseStorySelector}
+            onSelect={handleStorySelection}
+            profileInfoId={connectedAccount.id}
+            groupId={getGroupId()!}
+            selectedStoryIds={workflow.events.find(e => e.temp_id === currentEventForStorySelection)?.event_config.story_ids || []}
           />
         )}
       </div>
@@ -1182,8 +1239,9 @@ const TriggerStep: React.FC<{
   getAvailableActions: (triggerId: string) => string[];
   validationErrors: ValidationError[];
   onOpenPostSelector: (eventTempId: string) => void;
+  onOpenStorySelector: (eventTempId: string) => void;
   connectedAccount: any;
-}> = ({ onAddTrigger, workflow, updateEventConfig, setWorkflow, getAvailableActions, validationErrors, onOpenPostSelector, connectedAccount }) => {
+}> = ({ onAddTrigger, workflow, updateEventConfig, setWorkflow, getAvailableActions, validationErrors, onOpenPostSelector, onOpenStorySelector, connectedAccount }) => {
   const triggerEvent = workflow.events.find(e => e.event_type === 'trigger');
 
   return (
@@ -1273,11 +1331,11 @@ const TriggerStep: React.FC<{
           </div>
 
           {/* Trigger Configuration */}
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-            <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               Configure {TRIGGER_LABELS[triggerEvent.event_category] || triggerEvent.event_category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} Trigger
-            </h4>
-            
+              </h4>
+              
             {(() => {
               const FormComponent = getEventForm(triggerEvent.event_category);
               if (FormComponent) {
@@ -1287,6 +1345,7 @@ const TriggerStep: React.FC<{
                     onChange={(newConfig) => updateEventConfig(triggerEvent.temp_id, newConfig)}
                     errors={validationErrors}
                     onOpenPostSelector={() => onOpenPostSelector(triggerEvent.temp_id)}
+                    onOpenStorySelector={() => onOpenStorySelector(triggerEvent.temp_id)}
                     profileInfoId={connectedAccount?.id}
                   />
                 );
@@ -1296,10 +1355,10 @@ const TriggerStep: React.FC<{
               return (
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                   This trigger will activate when the specified event occurs.
-                </div>
+                    </div>
               );
             })()}
-          </div>
+              </div>
         </div>
       )}
     </div>
@@ -1332,8 +1391,8 @@ const ActionsStep: React.FC<{
         </p>
       </div>
 
-      {/* Flow Type Selection */}
-      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+      {/* Flow Type Selection - Hidden for now, will be enabled in future */}
+      {/* <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
         <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
           Action Flow Type
         </h3>
@@ -1365,7 +1424,7 @@ const ActionsStep: React.FC<{
             </span>
           </label>
         </div>
-      </div>
+      </div> */}
 
       {/* Current Trigger */}
       {triggerEvent && (
@@ -1411,7 +1470,7 @@ const ActionsStep: React.FC<{
               <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
                 Available actions for "{TRIGGER_LABELS[triggerEvent.event_category] || triggerEvent.event_category}" trigger:
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {(() => {
                   const availableActions = getAvailableActions(triggerEvent.event_category);
                   const selectedActions = actionEvents.map(e => e.event_category);
@@ -1419,17 +1478,17 @@ const ActionsStep: React.FC<{
                   return EVENT_CATEGORIES.ACTIONS
                     .filter(action => availableActions.includes(action.id))
                     .map((action) => {
-                      const Icon = action.icon;
+              const Icon = action.icon;
                       const isConflicting = isActionConflicting(action.id, selectedActions, triggerEvent.event_category);
                       const isSelected = selectedActions.includes(action.id);
                       
-                      return (
-                        <button
-                          key={action.id}
-                          onClick={() => {
+              return (
+                <button
+                  key={action.id}
+                  onClick={() => {
                             if (!isConflicting && !isSelected) {
-                              onAddAction(action.id);
-                              document.getElementById('action-selector')?.classList.add('hidden');
+                    onAddAction(action.id);
+                    document.getElementById('action-selector')?.classList.add('hidden');
                             }
                           }}
                           disabled={isConflicting || isSelected}
@@ -1440,8 +1499,8 @@ const ActionsStep: React.FC<{
                               ? 'border-red-300 bg-red-50 dark:bg-red-900/20 cursor-not-allowed opacity-60'
                               : 'border-gray-200 dark:border-gray-600 hover:border-primary-300 dark:hover:border-primary-600 hover:bg-white dark:hover:bg-gray-600'
                           }`}
-                        >
-                          <div className="flex items-center space-x-3">
+                >
+                  <div className="flex items-center space-x-3">
                             <div className={`p-2 rounded-lg ${
                               isSelected
                                 ? 'bg-green-100 dark:bg-green-800'
@@ -1456,8 +1515,8 @@ const ActionsStep: React.FC<{
                                   ? 'text-red-600 dark:text-red-300'
                                   : 'text-green-600 dark:text-green-400'
                               }`} />
-                            </div>
-                            <div>
+                    </div>
+                    <div>
                               <p className={`text-sm font-medium ${
                                 isSelected
                                   ? 'text-green-700 dark:text-green-200'
@@ -1465,7 +1524,7 @@ const ActionsStep: React.FC<{
                                   ? 'text-red-700 dark:text-red-200'
                                   : 'text-gray-900 dark:text-white'
                               }`}>
-                                {action.label}
+                        {action.label}
                                 {isSelected && ' (Selected)'}
                                 {isConflicting && ' (Conflicts)'}
                               </p>
@@ -1476,15 +1535,15 @@ const ActionsStep: React.FC<{
                                   ? 'text-red-600 dark:text-red-300'
                                   : 'text-gray-600 dark:text-gray-400'
                               }`}>
-                                {action.description}
-                              </p>
-                            </div>
-                          </div>
-                        </button>
-                      );
+                        {action.description}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
                     });
                 })()}
-              </div>
+          </div>
             </div>
           ) : (
             <div className="text-center py-4 text-gray-500 dark:text-gray-400">
@@ -1558,7 +1617,7 @@ const ActionsStep: React.FC<{
                           onChange={(newConfig) => updateEventConfig(action.temp_id, newConfig)}
                           errors={validationErrors.filter(err => err.field === `action_${index}`)}
                         />
-                      </div>
+                  </div>
                     );
                   }
                   
@@ -1644,7 +1703,7 @@ const ReviewStep: React.FC<{
             return (
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 This trigger will activate when the specified event occurs.
-              </div>
+                  </div>
             );
           })()}
         </div>
@@ -1690,7 +1749,7 @@ const ReviewStep: React.FC<{
               return (
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                   This action will be performed when triggered.
-                </div>
+              </div>
               );
             })()}
           </div>
