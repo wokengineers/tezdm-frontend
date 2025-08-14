@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, Instagram, Facebook, Smartphone, ExternalLink, ArrowLeft } from 'lucide-react';
+import { Zap, Instagram, Facebook, Smartphone, ExternalLink } from 'lucide-react';
 import { profileApi } from '../services/profileApi';
 import { useAuth } from '../contexts/AuthContext';
 import { SecurityManager } from '../utils/securityManager';
@@ -10,7 +10,7 @@ import LoadingButton from '../components/LoadingButton';
 import OAuthModal from '../components/OAuthModal';
 
 interface Platform {
-  id: number;
+   id: number;
   platform_type: string;
 }
 
@@ -315,13 +315,6 @@ const ConnectAccountsPage: React.FC = () => {
         <div className="max-w-4xl mx-auto px-4 py-8">
           {/* Header */}
           <div className="mb-8">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </button>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
               Connect Your Social Accounts
             </h1>
@@ -556,13 +549,6 @@ const ConnectAccountsPage: React.FC = () => {
       <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <button
-            onClick={() => setSelectedPlatform(null)}
-            className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to platforms
-          </button>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             Connect {getPlatformName(selectedPlatform.platform_type)}
           </h1>

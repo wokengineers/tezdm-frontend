@@ -97,7 +97,7 @@ const AutomationBuilderPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [previewMode, setPreviewMode] = useState<boolean>(false);
-  const [actionFlowType, setActionFlowType] = useState<'sequential' | 'parallel'>('parallel');
+  const [actionFlowType, setActionFlowType] = useState<'sequential' | 'parallel'>('sequential');
   
   // New state for trigger-action configuration
   const [triggerActionConfig, setTriggerActionConfig] = useState<TriggerActionConfig | null>(null);
@@ -892,12 +892,12 @@ const AutomationBuilderPage: React.FC = () => {
               if (!config.all_posts && (!config.post_ids || config.post_ids.length === 0)) {
                 errors.push({ field: 'posts', message: 'Please select posts to monitor' });
               }
-              // Fuzzy match validation - only when using keywords
-              if (!config.all_comments && config.keywords && config.keywords.length > 0) {
-                if (config.fuzzy_match_allowed && !config.fuzzy_match_percentage) {
+              // Fuzzy match validation - only when fuzzy match is enabled
+              if (config.fuzzy_match_allowed) {
+                if (!config.fuzzy_match_percentage || config.fuzzy_match_percentage === null) {
                   errors.push({ field: 'fuzzy_match_percentage', message: 'Fuzzy match percentage is required' });
                 }
-                if (config.fuzzy_match_percentage && (config.fuzzy_match_percentage < 0 || config.fuzzy_match_percentage > 100)) {
+                if (config.fuzzy_match_percentage !== null && (config.fuzzy_match_percentage < 0 || config.fuzzy_match_percentage > 100)) {
                   errors.push({ field: 'fuzzy_match_percentage', message: 'Percentage must be between 0 and 100' });
                 }
               }
@@ -912,12 +912,12 @@ const AutomationBuilderPage: React.FC = () => {
               if (!config.all_messages && (!config.keywords || config.keywords.length === 0)) {
                 errors.push({ field: 'messages', message: 'Please add keywords or select all messages' });
               }
-              // Fuzzy match validation - only when using keywords
-              if (!config.all_messages && config.keywords && config.keywords.length > 0) {
-                if (config.fuzzy_match_allowed && !config.fuzzy_match_percentage) {
+              // Fuzzy match validation - only when fuzzy match is enabled
+              if (config.fuzzy_match_allowed) {
+                if (!config.fuzzy_match_percentage || config.fuzzy_match_percentage === null) {
                   errors.push({ field: 'fuzzy_match_percentage', message: 'Fuzzy match percentage is required' });
                 }
-                if (config.fuzzy_match_percentage && (config.fuzzy_match_percentage < 0 || config.fuzzy_match_percentage > 100)) {
+                if (config.fuzzy_match_percentage !== null && (config.fuzzy_match_percentage < 0 || config.fuzzy_match_percentage > 100)) {
                   errors.push({ field: 'fuzzy_match_percentage', message: 'Percentage must be between 0 and 100' });
                 }
               }
@@ -928,12 +928,12 @@ const AutomationBuilderPage: React.FC = () => {
               if (!config.all_messages && (!config.keywords || config.keywords.length === 0)) {
                 errors.push({ field: 'messages', message: 'Please add keywords or select all messages' });
               }
-              // Fuzzy match validation - only when using keywords
-              if (!config.all_messages && config.keywords && config.keywords.length > 0) {
-                if (config.fuzzy_match_allowed && !config.fuzzy_match_percentage) {
+              // Fuzzy match validation - only when fuzzy match is enabled
+              if (config.fuzzy_match_allowed) {
+                if (!config.fuzzy_match_percentage || config.fuzzy_match_percentage === null) {
                   errors.push({ field: 'fuzzy_match_percentage', message: 'Fuzzy match percentage is required' });
                 }
-                if (config.fuzzy_match_percentage && (config.fuzzy_match_percentage < 0 || config.fuzzy_match_percentage > 100)) {
+                if (config.fuzzy_match_percentage !== null && (config.fuzzy_match_percentage < 0 || config.fuzzy_match_percentage > 100)) {
                   errors.push({ field: 'fuzzy_match_percentage', message: 'Percentage must be between 0 and 100' });
                 }
               }
@@ -954,6 +954,7 @@ const AutomationBuilderPage: React.FC = () => {
             switch (action.event_category) {
               case 'reply_to_comment':
               case 'reply_to_dm':
+              case 'send_dm':
                 if (!config.template || config.template.trim() === '') {
                   errors.push({ field: `action_${index}`, message: 'Reply template is required' });
                 }
