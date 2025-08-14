@@ -300,13 +300,23 @@ const LoginPage: React.FC = () => {
         <div className="text-center">
           <p className="text-xs text-gray-500">
             By signing in, you agree to our{' '}
-            <Link to="/terms" className="text-primary-400 hover:text-primary-300">
+            <a 
+              href="https://www.tezdm.com/terms-of-service/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-primary-400 hover:text-primary-300"
+            >
               Terms of Service
-            </Link>{' '}
+            </a>{' '}
             and{' '}
-            <Link to="/privacy" className="text-primary-400 hover:text-primary-300">
+            <a 
+              href="https://www.tezdm.com/privacy-policy/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-primary-400 hover:text-primary-300"
+            >
               Privacy Policy
-            </Link>
+            </a>
           </p>
         </div>
       </div>
