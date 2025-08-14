@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { mockData } from '../constants/mockApi';
+import ComingSoonOverlay from '../components/ComingSoonOverlay';
 
 /**
  * Billing page component
@@ -100,18 +101,23 @@ const PlanBillingPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Plan & Billing
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Manage your subscription and billing information
-          </p>
+    <ComingSoonOverlay
+      title="Plan & Billing"
+      description="Manage your subscription plans, billing information, and payment methods for TezDM services."
+      icon={CreditCard}
+    >
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Plan & Billing
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Manage your subscription and billing information
+            </p>
+          </div>
         </div>
-      </div>
 
       {/* Success/Error Message */}
       {message && (
@@ -391,6 +397,7 @@ const PlanBillingPage: React.FC = () => {
         </div>
       )}
     </div>
+    </ComingSoonOverlay>
   );
 };
 
