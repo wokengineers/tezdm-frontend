@@ -10,7 +10,7 @@ import LoadingButton from '../components/LoadingButton';
 import OAuthModal from '../components/OAuthModal';
 
 interface Platform {
-  id: number;
+   id: number;
   platform_type: string;
 }
 
