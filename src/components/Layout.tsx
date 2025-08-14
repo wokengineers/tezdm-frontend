@@ -356,61 +356,62 @@ const Layout: React.FC = () => {
 
                 {/* User dropdown */}
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
-                    {/* Instagram Connection Status */}
-                    <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                          Instagram Account
-                        </span>
-                        {connectedAccount ? (
-                          <div className="flex items-center space-x-1">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span className="text-xs text-green-600 dark:text-green-400">Connected</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-1">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">Not Connected</span>
-                          </div>
-                        )}
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                    {/* User Info Section */}
+                    <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-medium text-white">
+                            {user?.name?.charAt(0).toUpperCase() || 'U'}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                            {user?.name || 'User'}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {user?.email || 'user@example.com'}
+                          </p>
+                        </div>
                       </div>
-                      {connectedAccount && (
-                        <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 truncate">
-                          @{connectedAccount.username}
-                        </p>
-                      )}
+                      <div className="mt-2">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                          {user?.plan ? `${user.plan.charAt(0).toUpperCase() + user.plan.slice(1)} Plan` : 'Free Plan'}
+                        </span>
+                      </div>
                     </div>
                     
                     <button
                       onClick={() => {
-                        navigate('/connect-accounts');
+                        navigate('/billing');
                         setUserMenuOpen(false);
                       }}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
-                      <Instagram className="w-4 h-4 mr-3" />
-                      {connectedAccount ? 'Manage Account' : 'Connect Instagram'}
+                      <CreditCard className="w-4 h-4 mr-3" />
+                      Account & Billing
                     </button>
                     
                     <button
                       onClick={() => {
-                        navigate('/settings');
+                        navigate('/help');
                         setUserMenuOpen(false);
                       }}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
-                      <Settings className="w-4 h-4 mr-3" />
-                      Settings
+                      <HelpCircle className="w-4 h-4 mr-3" />
+                      Help & Support
                     </button>
                     
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                      <LogOut className="w-4 h-4 mr-3" />
-                      Logout
-                    </button>
+                    <div className="border-t border-gray-200 dark:border-gray-700 mt-1 pt-1">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <LogOut className="w-4 h-4 mr-3" />
+                        Logout
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
