@@ -16,7 +16,6 @@ import {
   Zap
 } from 'lucide-react';
 import { mockData } from '../constants/mockApi';
-import ComingSoonOverlay from '../components/ComingSoonOverlay';
 
 /**
  * Analytics page component with comprehensive metrics and insights
@@ -109,29 +108,24 @@ const AnalyticsPage: React.FC = () => {
   };
 
   return (
-    <ComingSoonOverlay
-      title="Analytics Dashboard"
-      description="Track your automation performance, engagement metrics, and detailed insights to optimize your Instagram automation strategy."
-      icon={BarChart3}
-    >
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Analytics Dashboard
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Track your automation performance and engagement metrics
-            </p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <button className="btn-secondary flex items-center">
-              <Download className="w-4 h-4 mr-2" />
-              Export Report
-            </button>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Analytics Dashboard
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Track your automation performance and engagement metrics
+          </p>
         </div>
+        <div className="flex items-center space-x-3">
+          <button className="btn-secondary flex items-center">
+            <Download className="w-4 h-4 mr-2" />
+            Export Report
+          </button>
+        </div>
+      </div>
 
       {/* Filters */}
       <div className="card">
@@ -518,7 +512,6 @@ const AnalyticsPage: React.FC = () => {
         </div>
       </div>
     </div>
-    </ComingSoonOverlay>
   );
 };
 

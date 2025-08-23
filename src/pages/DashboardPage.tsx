@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { mockData } from '../constants/mockApi';
-import ComingSoonOverlay from '../components/ComingSoonOverlay';
 
 /**
  * Dashboard page component with overview and quick actions
@@ -84,14 +83,9 @@ const DashboardPage: React.FC = () => {
   };
 
   return (
-    <ComingSoonOverlay
-      title="Dashboard"
-      description="Get a comprehensive overview of your automation performance, recent activity, and quick access to all your Instagram automation tools."
-      icon={Zap}
-    >
-      <div className="space-y-6">
-        {/* Welcome section */}
-        <div className="bg-gradient-to-r from-primary-500 to-secondary-500 rounded-xl p-6 text-white">
+    <div className="space-y-6">
+      {/* Welcome section */}
+      <div className="bg-gradient-to-r from-primary-500 to-secondary-500 rounded-xl p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold mb-2">
@@ -311,7 +305,6 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
     </div>
-    </ComingSoonOverlay>
   );
 };
 
