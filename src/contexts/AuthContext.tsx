@@ -37,11 +37,6 @@ interface AuthContextType {
   logout: () => void;
   signout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
-  // New OTP methods
-  generateOtp: (email: string) => Promise<boolean>;
-  validateOtp: (email: string, otp: string) => Promise<boolean>;
-  otpStep: 'email' | 'otp' | 'loading' | 'success';
-  currentEmail: string | null;
   error: string | null;
 }
 
@@ -57,11 +52,6 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   signout: async () => {},
   updateUser: () => {},
-  // New OTP methods
-  generateOtp: async () => false,
-  validateOtp: async () => false,
-  otpStep: 'email',
-  currentEmail: null,
   error: null,
 });
 
@@ -80,8 +70,6 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [otpStep, setOtpStep] = useState<'email' | 'otp' | 'loading' | 'success'>('email');
-  const [currentEmail, setCurrentEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   /**
@@ -90,7 +78,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const isAuthenticated = !!user;
 
   /**
-   * Simulate login process
+   * Login with email and password
    * @param email - User email
    * @param password - User password
    * @returns Promise resolving to success status
@@ -98,20 +86,65 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
+      setError(null);
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Step 1: Login and get initial tokens
+      const loginResponse = await authApi.login(email, password);
+      const { access_token, refresh_token } = loginResponse.data;
       
-      // Mock authentication logic
-      if (email === 'demo@example.com' && password === 'password') {
-        setUser(mockData.user);
-        localStorage.setItem('user', JSON.stringify(mockData.user));
-        return true;
+      // Step 2: Get user groups
+      const groupsResponse = await authApi.getGroups(access_token);
+      const groups = groupsResponse.data;
+      
+      if (groups.length === 0) {
+        throw new Error('No groups found for this user');
       }
       
-      return false;
+      // Step 3: Refresh token with first group
+      const firstGroup = groups[0];
+      const finalResponse = await authApi.refreshTokenWithGroup(refresh_token, firstGroup.id);
+      const finalTokens = finalResponse.data;
+      
+      // Step 4: Get user information from group memberships
+      const membershipsResponse = await authApi.getGroupMemberships(finalTokens.access_token, firstGroup.id);
+      const memberships = membershipsResponse.data;
+      
+      if (memberships.length === 0) {
+        throw new Error('No user information found');
+      }
+      
+      // Get the first membership (user's own membership)
+      const userMembership = memberships[0];
+      
+      // Step 5: Create user object with actual name from API
+      const userData: User = {
+        ...mockData.user,
+        id: email,
+        email,
+        name: userMembership.user_name || email.split('@')[0], // Use API name or fallback to email prefix
+        lastLogin: new Date().toISOString(),
+      };
+      
+      // Get token expiry time
+      const expiryTime = SecurityManager.getTokenExpiry(finalTokens.access_token);
+      if (!expiryTime) {
+        throw new Error('Invalid token response');
+      }
+      
+      // Store user and tokens securely
+      setUser(userData);
+      SecurityManager.storeUser(userData);
+      SecurityManager.storeTokens({
+        access_token: finalTokens.access_token,
+        refresh_token: finalTokens.refresh_token,
+        expires_at: expiryTime,
+        group_id: firstGroup.id
+      });
+      
+      return true;
     } catch (error) {
       console.error('Login error:', error);
+      setError(error instanceof Error ? error.message : 'Login failed. Please try again.');
       return false;
     } finally {
       setIsLoading(false);
@@ -119,7 +152,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   /**
-   * Simulate signup process
+   * Signup with name, email, and password
    * @param name - User name
    * @param email - User email
    * @param password - User password
@@ -128,25 +161,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signup = async (name: string, email: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
+      setError(null);
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call signup API
+      await authApi.signup(email, password, name);
       
-      // Mock signup logic
-      const newUser: User = {
-        ...mockData.user,
-        id: `user_${Date.now()}`,
-        name,
-        email,
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-      };
-      
-      setUser(newUser);
-      localStorage.setItem('user', JSON.stringify(newUser));
+      // Return true on successful signup (user will be redirected to login)
       return true;
     } catch (error) {
       console.error('Signup error:', error);
+      setError(error instanceof Error ? error.message : 'Signup failed. Please try again.');
       return false;
     } finally {
       setIsLoading(false);
@@ -158,8 +182,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const logout = (): void => {
     setUser(null);
-    setOtpStep('email');
-    setCurrentEmail(null);
     setError(null);
     SecurityManager.clearAllData();
   };
@@ -180,8 +202,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       // Always clear local data
       setUser(null);
-      setOtpStep('email');
-      setCurrentEmail(null);
       setError(null);
       SecurityManager.clearAllData();
     }
@@ -196,98 +216,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const updatedUser = { ...user, ...updates };
       setUser(updatedUser);
       SecurityManager.storeUser(updatedUser);
-    }
-  };
-
-  /**
-   * Generate OTP for email
-   * @param email - User email
-   * @returns Promise resolving to success status
-   */
-  const generateOtp = async (email: string): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      setOtpStep('loading');
-      
-      await authApi.generateOtp(email);
-      
-      setCurrentEmail(email);
-      setOtpStep('otp');
-      return true;
-    } catch (error) {
-      console.error('Generate OTP error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to generate OTP');
-      setOtpStep('email');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /**
-   * Validate OTP and complete authentication
-   * @param email - User email
-   * @param otp - OTP code
-   * @returns Promise resolving to success status
-   */
-  const validateOtp = async (email: string, otp: string): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      setOtpStep('loading');
-      
-      // Step 1: Validate OTP and get initial tokens
-      const otpResponse = await authApi.validateOtp(email, otp);
-      const { access_token, refresh_token } = otpResponse.data;
-      
-      // Step 2: Get user groups
-      const groupsResponse = await authApi.getGroups(access_token);
-      const groups = groupsResponse.data;
-      
-      if (groups.length === 0) {
-        throw new Error('No groups found for this user');
-      }
-      
-      // Step 3: Refresh token with first group
-      const firstGroup = groups[0];
-      const finalResponse = await authApi.refreshTokenWithGroup(refresh_token, firstGroup.id);
-      const finalTokens = finalResponse.data;
-      
-      // Step 4: Create user object and store tokens securely
-      const userData: User = {
-        ...mockData.user,
-        id: email,
-        email,
-        name: email.split('@')[0], // Use email prefix as name
-        lastLogin: new Date().toISOString(),
-      };
-      
-      // Get token expiry time
-      const expiryTime = SecurityManager.getTokenExpiry(finalTokens.access_token);
-      if (!expiryTime) {
-        throw new Error('Invalid token response');
-      }
-      
-      // Store user and tokens securely
-      setUser(userData);
-      SecurityManager.storeUser(userData);
-      SecurityManager.storeTokens({
-        access_token: finalTokens.access_token,
-        refresh_token: finalTokens.refresh_token,
-        expires_at: expiryTime,
-        group_id: firstGroup.id
-      });
-      
-      setOtpStep('success');
-      return true;
-    } catch (error) {
-      console.error('Validate OTP error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to validate OTP');
-      setOtpStep('otp');
-      return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -344,10 +272,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     signout,
     updateUser,
-    generateOtp,
-    validateOtp,
-    otpStep,
-    currentEmail,
     error,
   };
 

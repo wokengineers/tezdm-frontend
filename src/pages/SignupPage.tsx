@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Lock, Eye, EyeOff, Zap, ArrowRight, Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,23 +16,51 @@ const SignupPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [agreeToTerms, setAgreeToTerms] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+  const [localError, setLocalError] = useState<string>('');
   
-  const { signup } = useAuth();
+  const { signup, error: authError, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
+  // Sync loading state with auth context
+  useEffect(() => {
+    setIsLoading(authLoading);
+  }, [authLoading]);
+
+  // Restore form data on component mount
+  useEffect(() => {
+    restoreFormData();
+  }, []);
+
+  // Preserve form data when any field changes
+  useEffect(() => {
+    if (name || email || password || confirmPassword) {
+      preserveFormData();
+    }
+  }, [name, email, password, confirmPassword, agreeToTerms]);
+
+  // Handle auth errors
+  useEffect(() => {
+    if (authError) {
+      setLocalError(authError);
+      // Ensure form data is preserved - don't clear any form fields
+      console.log('Auth error occurred, preserving form data:', { name, email, password: password ? '[REDACTED]' : '', confirmPassword: confirmPassword ? '[REDACTED]' : '' });
+    }
+  }, [authError, name, email, password, confirmPassword]);
+
   /**
-   * Validate password strength
-   * @param password - Password to validate
-   * @returns Object with validation results
+   * Validate email format
    */
-  const validatePassword = (password: string): { isValid: boolean; checks: { hasLength: boolean; hasUppercase: boolean; hasLowercase: boolean; hasNumber: boolean; hasSpecial: boolean } } => {
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  /**
+   * Validate password strength (minimum 8 characters)
+   */
+  const validatePassword = (password: string): { isValid: boolean; checks: { hasLength: boolean } } => {
     const checks = {
       hasLength: password.length >= 8,
-      hasUppercase: /[A-Z]/.test(password),
-      hasLowercase: /[a-z]/.test(password),
-      hasNumber: /\d/.test(password),
-      hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(password),
     };
     
     return {
@@ -44,44 +72,99 @@ const SignupPage: React.FC = () => {
   const passwordValidation = validatePassword(password);
 
   /**
+   * Ensure form data is preserved on errors
+   * This function can be called if form data gets cleared unexpectedly
+   */
+  const preserveFormData = () => {
+    // Store form data in sessionStorage as backup
+    sessionStorage.setItem('signup_form_data', JSON.stringify({
+      name,
+      email,
+      password,
+      confirmPassword,
+      agreeToTerms
+    }));
+  };
+
+  /**
+   * Restore form data from backup if needed
+   */
+  const restoreFormData = () => {
+    const savedData = sessionStorage.getItem('signup_form_data');
+    if (savedData) {
+      try {
+        const data = JSON.parse(savedData);
+        setName(data.name || '');
+        setEmail(data.email || '');
+        setPassword(data.password || '');
+        setConfirmPassword(data.confirmPassword || '');
+        setAgreeToTerms(data.agreeToTerms || false);
+      } catch (error) {
+        console.error('Error restoring form data:', error);
+      }
+    }
+  };
+
+  /**
    * Handle form submission
    * @param e - Form event
    */
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
-    setError('');
+    setLocalError('');
+
+    // Validate name
+    if (!name.trim()) {
+      setLocalError('Please enter your full name');
+      return;
+    }
+
+    // Validate email
+    if (!email.trim()) {
+      setLocalError('Please enter your email address');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      setLocalError('Please enter a valid email address');
+      return;
+    }
+
+    // Validate password
+    if (!password.trim()) {
+      setLocalError('Please enter a password');
+      return;
+    }
+
+    if (!passwordValidation.isValid) {
+      setLocalError('Password must be at least 8 characters long');
+      return;
+    }
+
+    // Validate confirm password
+    if (!confirmPassword.trim()) {
+      setLocalError('Please confirm your password');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setLocalError('Passwords do not match');
+      return;
+    }
 
     if (!agreeToTerms) {
-      setError('Please agree to the Terms of Service and Privacy Policy');
+      setLocalError('Please agree to the Terms of Service and Privacy Policy');
       return;
     }
 
-    // Validate passwords match
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
+    const success = await signup(name, email, password);
+    if (success) {
+      // Clear saved form data on successful signup
+      sessionStorage.removeItem('signup_form_data');
+      navigate('/login');
     }
-
-    // Validate password strength
-    if (!passwordValidation.isValid) {
-      setError('Please ensure your password meets all requirements');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const success = await signup(name, email, password);
-      if (success) {
-        navigate('/onboarding');
-      } else {
-        setError('An error occurred during signup. Please try again.');
-      }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    // Note: Form data is intentionally preserved on API errors
+    // This allows users to fix the issue without re-entering all their data
   };
 
   return (
@@ -200,22 +283,16 @@ const SignupPage: React.FC = () => {
                     Password requirements:
                   </p>
                   <div className="space-y-1">
-                    {Object.entries(passwordValidation.checks).map(([key, isValid]) => (
-                      <div key={key} className="flex items-center text-xs">
-                        <Check 
-                          className={`w-3 h-3 mr-2 ${
-                            isValid ? 'text-green-500' : 'text-gray-500'
-                          }`} 
-                        />
-                        <span className={isValid ? 'text-green-400' : 'text-gray-500'}>
-                          {key === 'hasLength' && 'At least 8 characters'}
-                          {key === 'hasUppercase' && 'One uppercase letter'}
-                          {key === 'hasLowercase' && 'One lowercase letter'}
-                          {key === 'hasNumber' && 'One number'}
-                          {key === 'hasSpecial' && 'One special character'}
-                        </span>
-                      </div>
-                    ))}
+                    <div className="flex items-center text-xs">
+                      <Check 
+                        className={`w-3 h-3 mr-2 ${
+                          passwordValidation.checks.hasLength ? 'text-green-500' : 'text-gray-500'
+                        }`} 
+                      />
+                      <span className={passwordValidation.checks.hasLength ? 'text-green-400' : 'text-gray-500'}>
+                        At least 8 characters
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -297,9 +374,9 @@ const SignupPage: React.FC = () => {
             </div>
 
             {/* Error message */}
-            {error && (
+            {localError && (
               <div className="bg-red-900/20 border border-red-800 rounded-lg p-3">
-                <p className="text-sm text-red-400">{error}</p>
+                <p className="text-sm text-red-400">{localError}</p>
               </div>
             )}
 
@@ -320,26 +397,7 @@ const SignupPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Separator */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-600"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-800 text-gray-400">OR CONTINUE WITH</span>
-            </div>
-          </div>
 
-          {/* Google sign up */}
-          <button
-            disabled={isLoading}
-            className="w-full flex items-center justify-center px-4 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white hover:bg-gray-600 transition-colors duration-200"
-          >
-            <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center mr-3">
-              <span className="text-sm font-bold text-gray-700">G</span>
-            </div>
-            Continue with Google
-          </button>
 
           {/* Sign in link */}
           <div className="text-center mt-6">

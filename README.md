@@ -57,9 +57,9 @@ A modern, scalable React-based frontend for an Instagram Automation Platform tha
 4. **Open your browser**
    Navigate to `http://localhost:3000`
 
-5. **Login with demo credentials**
-   - Email: `demo@example.com`
-   - Password: `password`
+5. **Login with your credentials**
+   - Use your email and password to sign in
+   - Or create a new account using the signup page
 
 ## 🎨 Design System
 
@@ -81,9 +81,13 @@ A modern, scalable React-based frontend for an Instagram Automation Platform tha
 ## 📱 Pages & Features
 
 ### Authentication
-- **Login Page**: Email/password authentication with demo account (`demo@example.com` / `password`)
-- **Signup Page**: User registration with password strength validation
+- **Login Page**: Email/password authentication with secure token management
+- **Signup Page**: User registration with email validation and password requirements (minimum 8 characters)
 - **Protected Routes**: Secure access to authenticated features
+- **Token Management**: Encrypted token storage with automatic refresh
+- **Group-based Access**: Multi-group support with automatic group selection
+- **User Information**: Automatic fetching of user name and role from group memberships
+- **Form Data Preservation**: Form data is preserved on API errors for better UX
 
 ### Onboarding
 - **Step-by-step Guide**: Welcome, how it works, plan selection, account connection
@@ -166,9 +170,13 @@ npm run build
 ### Environment Variables
 Create a `.env` file for environment-specific configuration:
 ```env
-REACT_APP_API_URL=your-api-endpoint
+REACT_APP_API_BASE_URL=https://api.stage.wokengineers.com/v1
 REACT_APP_GOOGLE_CLIENT_ID=your-google-oauth-client-id
 REACT_APP_META_APP_ID=your-meta-app-id
+REACT_APP_ENCRYPTION_KEY=your-encryption-key
+REACT_APP_ENABLE_SECURITY_LOGGING=true
+REACT_APP_TOKEN_REFRESH_THRESHOLD=300000
+REACT_APP_MAX_DATA_AGE=86400000
 ```
 
 ### Available Scripts

@@ -3,11 +3,13 @@ export const API_CONFIG = {
   BASE_URL: process.env.REACT_APP_API_BASE_URL || 'https://api.stage.wokengineers.com/v1',
   ENDPOINTS: {
     AUTH: {
-      OTP_AUTHENTICATION: '/ums/auth/otp_authentication',
+      LOGIN: '/ums/auth/email_password_authentication/login/',
+      SIGNUP: '/ums/auth/email_password_authentication/signup/',
       REFRESH_TOKEN: '/ums/auth/refresh_token',
       SIGNOUT: '/ums/auth/signout',
     },
     GROUPS: '/ums/groups/',
+    GROUP_MEMBERSHIPS: '/ums/group-memberships/',
   },
 };
 
