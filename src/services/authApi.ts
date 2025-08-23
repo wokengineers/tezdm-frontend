@@ -7,15 +7,19 @@ interface ApiResponse<T> {
   data: T;
 }
 
-interface OtpRequest {
-  credential_type: string;
+interface LoginRequest {
   credential: string;
-  otp_action: 'generate_otp' | 'validate_otp';
-  otp?: string;
-  send_otp: boolean;
+  password: string;
+  confirm_password: string;
 }
 
-interface OtpResponse {
+interface SignupRequest {
+  credential: string;
+  password: string;
+  name: string;
+}
+
+interface LoginResponse {
   access_token: string;
   refresh_token: string;
 }
@@ -24,6 +28,18 @@ interface Group {
   id: number;
   name: string;
   description: string;
+}
+
+interface GroupMembership {
+  id: number;
+  user: string;
+  group: {
+    id: number;
+    name: string;
+  };
+  role: string;
+  permissions: string[];
+  user_name: string;
 }
 
 interface RefreshTokenRequest {
@@ -71,35 +87,32 @@ export const authApi = {
   },
 
   /**
-   * Generate OTP for email
+   * Login with email and password
    */
-  async generateOtp(email: string): Promise<ApiResponse<void>> {
-    const payload: OtpRequest = {
-      credential_type: 'email_id',
+  async login(email: string, password: string): Promise<ApiResponse<LoginResponse>> {
+    const payload: LoginRequest = {
       credential: email,
-      otp_action: 'generate_otp',
-      send_otp: true,
+      password: password,
+      confirm_password: password, // Same as password for login
     };
 
-    return this.makeRequest<void>(API_CONFIG.ENDPOINTS.AUTH.OTP_AUTHENTICATION, {
+    return this.makeRequest<LoginResponse>(API_CONFIG.ENDPOINTS.AUTH.LOGIN, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
   },
 
   /**
-   * Validate OTP and get tokens
+   * Signup with email, password, and name
    */
-  async validateOtp(email: string, otp: string): Promise<ApiResponse<OtpResponse>> {
-    const payload: OtpRequest = {
-      credential_type: 'email_id',
+  async signup(email: string, password: string, name: string): Promise<ApiResponse<void>> {
+    const payload: SignupRequest = {
       credential: email,
-      otp_action: 'validate_otp',
-      otp,
-      send_otp: false,
+      password: password,
+      name: name,
     };
 
-    return this.makeRequest<OtpResponse>(API_CONFIG.ENDPOINTS.AUTH.OTP_AUTHENTICATION, {
+    return this.makeRequest<void>(API_CONFIG.ENDPOINTS.AUTH.SIGNUP, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
@@ -117,15 +130,27 @@ export const authApi = {
   },
 
   /**
+   * Get group memberships to fetch user information
+   */
+  async getGroupMemberships(accessToken: string, groupId: number): Promise<ApiResponse<GroupMembership[]>> {
+    const url = `${API_CONFIG.ENDPOINTS.GROUP_MEMBERSHIPS}?group=${groupId}`;
+    return this.makeRequest<GroupMembership[]>(url, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+  },
+
+  /**
    * Refresh token with group
    */
-  async refreshTokenWithGroup(refreshToken: string, groupId: number): Promise<ApiResponse<OtpResponse>> {
+  async refreshTokenWithGroup(refreshToken: string, groupId: number): Promise<ApiResponse<LoginResponse>> {
     const payload: RefreshTokenRequest = {
       refresh_token: refreshToken,
       group: groupId,
     };
 
-    return this.makeRequest<OtpResponse>(API_CONFIG.ENDPOINTS.AUTH.REFRESH_TOKEN, {
+    return this.makeRequest<LoginResponse>(API_CONFIG.ENDPOINTS.AUTH.REFRESH_TOKEN, {
       method: 'POST',
       body: JSON.stringify(payload),
     });

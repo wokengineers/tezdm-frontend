@@ -111,6 +111,7 @@ export const PostCommentTriggerForm: React.FC<PostSelectionFormProps> = ({ confi
       handleChange('keywords', [...currentKeywords, keyword]);
     }
   };
+  
   const validateForm = (): FormValidation => {
     const errors: ValidationError[] = [];
 
@@ -139,6 +140,29 @@ export const PostCommentTriggerForm: React.FC<PostSelectionFormProps> = ({ confi
 
   const handleChange = (field: string, value: any) => {
     const newConfig = { ...config, [field]: value };
+    
+    // Special handling for fuzzy match checkbox
+    if (field === 'fuzzy_match_allowed') {
+      if (value === true) {
+        // When enabling fuzzy match, set default percentage if not set
+        if (!newConfig.fuzzy_match_percentage && newConfig.fuzzy_match_percentage !== 0) {
+          newConfig.fuzzy_match_percentage = 80;
+        }
+      } else {
+        // When disabling fuzzy match, clear the percentage
+        newConfig.fuzzy_match_percentage = null;
+      }
+    }
+    
+    // Special handling for all_comments change
+    if (field === 'all_comments') {
+      if (value === true) {
+        // When switching to all comments, disable fuzzy match
+        newConfig.fuzzy_match_allowed = false;
+        newConfig.fuzzy_match_percentage = null;
+      }
+    }
+    
     onChange(newConfig);
   };
 
@@ -264,16 +288,8 @@ export const PostCommentTriggerForm: React.FC<PostSelectionFormProps> = ({ confi
           <div className="flex items-start space-x-3">
             <input
               type="checkbox"
-              checked={config.fuzzy_match_allowed || false}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                handleChange('fuzzy_match_allowed', checked);
-                if (checked && config.fuzzy_match_percentage == null) {
-                  handleChange('fuzzy_match_percentage', 80);
-                } else if (!checked) {
-                  handleChange('fuzzy_match_percentage', null);
-                }
-              }}
+              checked={Boolean(config.fuzzy_match_allowed)}
+              onChange={(e) => handleChange('fuzzy_match_allowed', e.target.checked)}
               className="mt-0.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
             />
             <div className="flex-1">
@@ -361,6 +377,29 @@ export const StoryReplyTriggerForm: React.FC<StorySelectionFormProps> = ({ confi
 
   const handleChange = (field: string, value: any) => {
     const newConfig = { ...config, [field]: value };
+    
+    // Special handling for fuzzy match checkbox
+    if (field === 'fuzzy_match_allowed') {
+      if (value === true) {
+        // When enabling fuzzy match, set default percentage if not set
+        if (!newConfig.fuzzy_match_percentage && newConfig.fuzzy_match_percentage !== 0) {
+          newConfig.fuzzy_match_percentage = 80;
+        }
+      } else {
+        // When disabling fuzzy match, clear the percentage
+        newConfig.fuzzy_match_percentage = null;
+      }
+    }
+    
+    // Special handling for all_messages change
+    if (field === 'all_messages') {
+      if (value === true) {
+        // When switching to all messages, disable fuzzy match
+        newConfig.fuzzy_match_allowed = false;
+        newConfig.fuzzy_match_percentage = null;
+      }
+    }
+    
     onChange(newConfig);
   };
 
@@ -480,16 +519,8 @@ export const StoryReplyTriggerForm: React.FC<StorySelectionFormProps> = ({ confi
           <div className="flex items-start space-x-3">
             <input
               type="checkbox"
-              checked={config.fuzzy_match_allowed || false}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                handleChange('fuzzy_match_allowed', checked);
-                if (checked && config.fuzzy_match_percentage == null) {
-                  handleChange('fuzzy_match_percentage', 80);
-                } else if (!checked) {
-                  handleChange('fuzzy_match_percentage', null);
-                }
-              }}
+              checked={Boolean(config.fuzzy_match_allowed)}
+              onChange={(e) => handleChange('fuzzy_match_allowed', e.target.checked)}
               className="mt-0.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
             />
             <div className="flex-1">
@@ -578,6 +609,29 @@ export const UserDirectMessageTriggerForm: React.FC<BaseFormProps> = ({ config, 
 
   const handleChange = (field: string, value: any) => {
     const newConfig = { ...config, [field]: value };
+    
+    // Special handling for fuzzy match checkbox
+    if (field === 'fuzzy_match_allowed') {
+      if (value === true) {
+        // When enabling fuzzy match, set default percentage if not set
+        if (!newConfig.fuzzy_match_percentage && newConfig.fuzzy_match_percentage !== 0) {
+          newConfig.fuzzy_match_percentage = 80;
+        }
+      } else {
+        // When disabling fuzzy match, clear the percentage
+        newConfig.fuzzy_match_percentage = null;
+      }
+    }
+    
+    // Special handling for all_messages change
+    if (field === 'all_messages') {
+      if (value === true) {
+        // When switching to all messages, disable fuzzy match
+        newConfig.fuzzy_match_allowed = false;
+        newConfig.fuzzy_match_percentage = null;
+      }
+    }
+    
     onChange(newConfig);
   };
 
@@ -640,16 +694,8 @@ export const UserDirectMessageTriggerForm: React.FC<BaseFormProps> = ({ config, 
           <div className="flex items-start space-x-3">
             <input
               type="checkbox"
-              checked={config.fuzzy_match_allowed || false}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                handleChange('fuzzy_match_allowed', checked);
-                if (checked && config.fuzzy_match_percentage == null) {
-                  handleChange('fuzzy_match_percentage', 80);
-                } else if (!checked) {
-                  handleChange('fuzzy_match_percentage', null);
-                }
-              }}
+              checked={Boolean(config.fuzzy_match_allowed)}
+              onChange={(e) => handleChange('fuzzy_match_allowed', e.target.checked)}
               className="mt-0.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
             />
             <div className="flex-1">
