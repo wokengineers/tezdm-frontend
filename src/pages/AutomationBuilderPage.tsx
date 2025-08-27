@@ -91,7 +91,7 @@ const AutomationBuilderPage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [workflow, setWorkflow] = useState<Workflow>({
     name: '',
-    is_active: true,
+    is_active: false,
     events: []
   });
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -410,6 +410,9 @@ const AutomationBuilderPage: React.FC = () => {
   const getInitialConfigForAction = (actionCategory: string) => {
     switch (actionCategory) {
       case 'reply_to_comment':
+        return {
+          templates: []
+        };
       case 'reply_to_dm':
       case 'send_dm':
         return {
@@ -782,7 +785,7 @@ const AutomationBuilderPage: React.FC = () => {
 
       const payload = {
         name: workflow.name,
-        is_active: workflow.is_active,
+        is_active: editMode ? false : workflow.is_active,
         profile_info_id: connectedAccount.id,
         events: events
       };
@@ -968,6 +971,15 @@ const AutomationBuilderPage: React.FC = () => {
             
             switch (action.event_category) {
               case 'reply_to_comment':
+                if (!config.templates || config.templates.length === 0) {
+                  errors.push({ field: `action_${index}`, message: 'At least one reply template is required' });
+                } else {
+                  const emptyTemplates = config.templates.filter((t: string) => !t || !t.trim());
+                  if (emptyTemplates.length > 0) {
+                    errors.push({ field: `action_${index}`, message: 'All templates must have content' });
+                  }
+                }
+                break;
               case 'reply_to_dm':
               case 'send_dm':
                 if (!config.template || config.template.trim() === '') {
@@ -1450,7 +1462,7 @@ const TriggerStep: React.FC<{
                      events: workflow.events.filter((e: Event) => e.event_type !== 'trigger')
                    });
                  }}
-                 className="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg transition-colors"
+                 className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                >
                 <Trash2 className="w-4 h-4" />
               </button>

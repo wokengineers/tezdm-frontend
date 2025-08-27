@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, Plus, X, Info, Tag } from 'lucide-react';
+import { AlertCircle, Plus, X, Info, Tag, Trash2 } from 'lucide-react';
 
 // Types for form validation
 interface ValidationError {
@@ -10,6 +10,11 @@ interface ValidationError {
 interface FormValidation {
   isValid: boolean;
   errors: ValidationError[];
+}
+
+interface Template {
+  id: string;
+  text: string;
 }
 
 // Base form props interface
@@ -809,6 +814,171 @@ export const ReplyEventActionForm: React.FC<BaseFormProps> = ({ config, onChange
 };
 
 /**
+ * Reply to Comment Form with Multiple Editable Templates
+ */
+export const ReplyToCommentForm: React.FC<BaseFormProps> = ({ config, onChange, errors }) => {
+  // Default templates from existing DM options
+  const defaultTemplates = [
+    "Check your DMs 👋",
+    "Just sent you a message 📩", 
+    "I've replied in your inbox 🙌",
+    "DM sent — let's chat there! 🚀"
+  ];
+
+  // Initialize config with default templates if empty
+  React.useEffect(() => {
+    if (!config.templates || config.templates.length === 0) {
+      onChange({ ...config, templates: defaultTemplates });
+    }
+  }, []);
+
+  const templates: string[] = config.templates || [];
+
+  const addTemplate = () => {
+    if (templates.length < 10) {
+      onChange({ ...config, templates: [...templates, ""] });
+    }
+  };
+
+  const deleteTemplate = (index: number) => {
+    if (templates.length > 1) {
+      const updatedTemplates = templates.filter((_, i) => i !== index);
+      onChange({ ...config, templates: updatedTemplates });
+    }
+  };
+
+  const updateTemplate = (index: number, newText: string) => {
+    const updatedTemplates = templates.map((template, i) => 
+      i === index ? newText : template
+    );
+    onChange({ ...config, templates: updatedTemplates });
+  };
+
+  // Auto-resize textarea function
+  const autoResizeTextarea = (element: HTMLTextAreaElement) => {
+    element.style.height = 'auto';
+    const scrollHeight = element.scrollHeight;
+    const maxHeight = 120; // Maximum height in pixels (about 5-6 lines)
+    element.style.height = Math.min(scrollHeight, maxHeight) + 'px';
+    element.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
+  };
+
+  // Handle textarea input with auto-resize
+  const handleTextareaChange = (index: number, e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    updateTemplate(index, e.target.value);
+    autoResizeTextarea(e.target);
+  };
+
+  const validateForm = (): FormValidation => {
+    const errors: ValidationError[] = [];
+
+    if (!templates || templates.length === 0) {
+      errors.push({ field: 'templates', message: 'At least one reply template is required' });
+    } else {
+      const emptyTemplates = templates.filter(t => !t.trim());
+      if (emptyTemplates.length > 0) {
+        errors.push({ field: 'templates', message: 'All templates must have content' });
+      }
+    }
+
+    return { isValid: errors.length === 0, errors };
+  };
+
+  // Auto-resize all textareas when templates change
+  React.useEffect(() => {
+    const textareas = document.querySelectorAll('.auto-resize-textarea');
+    textareas.forEach((textarea) => {
+      if (textarea instanceof HTMLTextAreaElement) {
+        autoResizeTextarea(textarea);
+      }
+    });
+  }, [templates]);
+
+  const allErrors = errors || [];
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Reply Templates (Random Selection) *
+        </label>
+        <p className="text-xs text-gray-500 mb-4">
+          One template will be randomly selected when replying to comments.
+        </p>
+
+        {/* Templates List */}
+        <div className="space-y-2">
+          {templates.map((template, index) => (
+            <div key={index} className="relative group">
+              <textarea
+                value={template}
+                onChange={(e) => handleTextareaChange(index, e)}
+                placeholder="Enter your reply message..."
+                rows={1}
+                className="auto-resize-textarea w-full px-4 py-2 pr-10 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 text-sm resize-none"
+              />
+              {templates.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => deleteTemplate(index)}
+                  className="absolute top-2 right-2 text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors p-1"
+                  title="Delete template"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Add Template Button */}
+        {templates.length < 10 && (
+          <button
+            type="button"
+            onClick={addTemplate}
+            className="w-full mt-3 px-4 py-3 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-xl text-gray-500 dark:text-gray-400 hover:border-primary-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all duration-200 flex items-center justify-center space-x-2 text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Another Reply</span>
+          </button>
+        )}
+
+        {/* Template Limit Info */}
+        {templates.length >= 10 && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+            Maximum 10 templates allowed
+          </p>
+        )}
+
+        {/* Info Box */}
+        <div className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+          <div className="flex items-start">
+            <Info className="w-4 h-4 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-blue-700 dark:text-blue-300">
+              One template will be randomly selected when replying to comments.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {allErrors.length > 0 && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+          <div className="flex items-start">
+            <AlertCircle className="w-4 h-4 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-red-700 dark:text-red-300">
+              {allErrors.map((error, index) => (
+                <p key={index} className={index > 0 ? 'mt-1' : ''}>• {error.message}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
  * Base Webhook Form Component
  */
 const BaseWebhookForm: React.FC<{
@@ -1016,6 +1186,7 @@ export const getEventForm = (eventCategory: string) => {
     case 'user_direct_message':
       return UserDirectMessageTriggerForm;
     case 'reply_to_comment':
+      return ReplyToCommentForm;
     case 'reply_to_dm':
       return ReplyEventActionForm;
     case 'reply_to_comment_webhook':

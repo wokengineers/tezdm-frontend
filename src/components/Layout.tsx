@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -82,6 +82,7 @@ const Layout: React.FC = () => {
   const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);
   const [connectedAccounts, setConnectedAccounts] = useState<any[]>([]);
   const [isLoadingAccounts, setIsLoadingAccounts] = useState<boolean>(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signout } = useAuth();
@@ -114,6 +115,25 @@ const Layout: React.FC = () => {
 
     fetchConnectedAccounts();
   }, []);
+
+  /**
+   * Handle click outside user menu
+   */
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [userMenuOpen]);
 
   /**
    * Navigation items configuration
@@ -345,7 +365,7 @@ const Layout: React.FC = () => {
               </button>
 
               {/* User menu */}
-              <div className="relative">
+              <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center space-x-2 p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
