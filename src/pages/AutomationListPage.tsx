@@ -184,14 +184,7 @@ const AutomationListPage: React.FC = () => {
     return isActive ? 'bg-green-500' : 'bg-gray-400';
   };
 
-  /**
-   * Get status text
-   * @param status - Automation status
-   * @returns Status text
-   */
-  const getStatusText = (isActive: boolean) => {
-    return isActive ? 'Live' : 'Inactive';
-  };
+
 
   /**
    * Get flow description
@@ -482,9 +475,9 @@ const AutomationListPage: React.FC = () => {
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           {automation.name}
                         </h3>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(automation.is_active)} text-white`}>
-                          • {getStatusText(automation.is_active)}
-                        </span>
+                        {automation.is_active && (
+                          <span className="inline-flex items-center justify-center w-2 h-2 bg-green-500 rounded-full"></span>
+                        )}
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                         {getFlowDescription(automation)}
