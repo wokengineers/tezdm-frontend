@@ -8,6 +8,7 @@ import { SecurityManager } from '../utils/securityManager';
 import LoadingSpinner from '../components/LoadingSpinner';
 import LoadingButton from '../components/LoadingButton';
 import OAuthModal from '../components/OAuthModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 interface Platform {
    id: number;
@@ -44,6 +45,8 @@ const ConnectAccountsPage: React.FC = () => {
   const [loadingAccounts, setLoadingAccounts] = useState<boolean>(false);
   const [connectingPlatform, setConnectingPlatform] = useState<number | null>(null);
   const [deletingAccount, setDeletingAccount] = useState<number | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<boolean>(false);
+  const [accountToDelete, setAccountToDelete] = useState<ConnectedAccount | null>(null);
   const hasLoadedRef = useRef<boolean>(false);
   
   const navigate = useNavigate();
@@ -155,18 +158,28 @@ const ConnectAccountsPage: React.FC = () => {
   /**
    * Handle delete connected account
    */
-  const handleDeleteAccount = async (accountId: number): Promise<void> => {
-    if (deletingAccount === accountId) return;
+  const handleDeleteAccount = async (account: ConnectedAccount): Promise<void> => {
+    setAccountToDelete(account);
+    setShowDeleteConfirmation(true);
+  };
+
+  /**
+   * Handle confirm delete account
+   */
+  const handleConfirmDeleteAccount = async (): Promise<void> => {
+    if (!accountToDelete) return;
     
     const groupId = getGroupId();
     if (!groupId) {
       setError('Group ID not found. Please login again.');
+      setShowDeleteConfirmation(false);
+      setAccountToDelete(null);
       return;
     }
 
-    setDeletingAccount(accountId);
+    setDeletingAccount(accountToDelete.id);
     try {
-      await profileApi.deleteConnectedAccount(accountId, groupId);
+      await profileApi.deleteConnectedAccount(accountToDelete.id, groupId);
       console.log('Account deleted successfully');
       // Reload connected accounts after successful deletion
       await loadConnectedAccounts();
@@ -176,7 +189,17 @@ const ConnectAccountsPage: React.FC = () => {
       setError('Failed to delete account. Please try again.');
     } finally {
       setDeletingAccount(null);
+      setShowDeleteConfirmation(false);
+      setAccountToDelete(null);
     }
+  };
+
+  /**
+   * Handle cancel delete account
+   */
+  const handleCancelDeleteAccount = (): void => {
+    setShowDeleteConfirmation(false);
+    setAccountToDelete(null);
   };
 
   /**
@@ -495,7 +518,7 @@ const ConnectAccountsPage: React.FC = () => {
                                 Connected
                               </span>
                               <LoadingButton
-                                onClick={() => handleDeleteAccount(account.id)}
+                                onClick={() => handleDeleteAccount(account)}
                                 loading={deletingAccount === account.id}
                                 loadingText="Disconnecting..."
                                 variant="danger"
@@ -539,6 +562,19 @@ const ConnectAccountsPage: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Confirmation Modal for Account Deletion */}
+        <ConfirmationModal
+          isOpen={showDeleteConfirmation}
+          onClose={handleCancelDeleteAccount}
+          onConfirm={handleConfirmDeleteAccount}
+          title="Disconnect Account"
+          message={`Are you sure you want to disconnect your ${accountToDelete ? getPlatformName(accountToDelete.platform) : ''} account (@${accountToDelete?.name || 'unknown'})? This action will delete all associated data and cannot be undone.`}
+          confirmText="Yes, Disconnect"
+          cancelText="Cancel"
+          variant="danger"
+          isLoading={deletingAccount !== null}
+        />
       </div>
     );
   }
@@ -573,6 +609,19 @@ const ConnectAccountsPage: React.FC = () => {
           oauthUrl={oauthUrl}
           onDirectRedirect={handleDirectRedirect}
           onBackToPlatforms={handleBackToPlatforms}
+        />
+
+        {/* Confirmation Modal for Account Deletion */}
+        <ConfirmationModal
+          isOpen={showDeleteConfirmation}
+          onClose={handleCancelDeleteAccount}
+          onConfirm={handleConfirmDeleteAccount}
+          title="Disconnect Account"
+          message={`Are you sure you want to disconnect your ${accountToDelete ? getPlatformName(accountToDelete.platform) : ''} account (@${accountToDelete?.name || 'unknown'})? This action will delete all associated data and cannot be undone.`}
+          confirmText="Yes, Disconnect"
+          cancelText="Cancel"
+          variant="danger"
+          isLoading={deletingAccount !== null}
         />
       </div>
     </div>

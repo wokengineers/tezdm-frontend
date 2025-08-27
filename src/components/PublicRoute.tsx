@@ -15,10 +15,10 @@ interface PublicRouteProps {
  * @returns Public route component or redirect to dashboard
  */
 const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isAuthLoading } = useAuth();
 
-  // Show loading state while checking authentication
-  if (isLoading) {
+  // Show loading state while checking authentication (but not during auth operations)
+  if (isLoading && !isAuthLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">

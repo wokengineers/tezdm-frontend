@@ -10,6 +10,8 @@ The authentication system has been updated from OTP-based authentication to emai
 - **New**: 
   - `/ums/auth/email_password_authentication/login/` (Login)
   - `/ums/auth/email_password_authentication/signup/` (Signup)
+  - `/ums/auth/email_password_authentication/forgot_password/` (Forgot password)
+  - `/ums/auth/email_password_authentication/reset_password/` (Reset password)
   - `/ums/group-memberships/?group={groupId}` (Get user information)
 
 ### 2. Authentication Flow Changes
@@ -33,6 +35,12 @@ The authentication system has been updated from OTP-based authentication to emai
    - System fetches user information from group memberships
    - System creates user object with actual name from API
    - Same token management and group handling as before
+3. **Forgot Password Flow**:
+   - User enters email on forgot password page
+   - System sends reset link to email
+   - User clicks link with format: `/forgot-password/{otpToken}/{email}/{hmacSignature}`
+   - User enters new password and confirms
+   - System resets password and redirects to login
 
 ### 3. API Payload Changes
 
@@ -89,6 +97,40 @@ The authentication system has been updated from OTP-based authentication to emai
 }
 ```
 
+#### Forgot Password Request:
+```json
+{
+  "credential": "user@example.com"
+}
+```
+
+#### Forgot Password Response:
+```json
+{
+  "status": 1,
+  "message": "Success"
+}
+```
+
+#### Reset Password Request:
+```json
+{
+  "password": "newpassword",
+  "confirm_password": "newpassword",
+  "otp_token": "080293",
+  "hmac_signature_b64": "MiNb3u51Mug3a4YforbII7Wy7oUcN2dyjRHHJRL0v7c=",
+  "credential": "user@example.com"
+}
+```
+
+#### Reset Password Response:
+```json
+{
+  "status": 1,
+  "message": "Success"
+}
+```
+
 ### 4. Validation Requirements
 
 #### Email Validation:
@@ -118,7 +160,6 @@ The authentication system has been updated from OTP-based authentication to emai
 - **Better Error Handling**: Clear validation messages for each field
 - **Consistent UI**: Same design language across login and signup pages
 - **Loading States**: Visual feedback during authentication process
-- **Form Data Preservation**: Form data is preserved on API errors
 - **Clean Signup Flow**: Signup redirects to login page for explicit authentication
 
 ### 7. Files Modified
@@ -131,6 +172,9 @@ The authentication system has been updated from OTP-based authentication to emai
 #### UI Components:
 - `src/pages/LoginPage.tsx` - Complete rewrite for email/password
 - `src/pages/SignupPage.tsx` - Updated validation and API integration
+- `src/pages/ForgotPasswordPage.tsx` - New forgot password page
+- `src/pages/ResetPasswordPage.tsx` - New reset password page with URL parameters
+- `src/App.tsx` - Added routes for forgot password pages
 
 #### Documentation:
 - `README.md` - Updated authentication section

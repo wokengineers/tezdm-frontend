@@ -1,4 +1,5 @@
 import { secureApi } from './secureApi';
+import { API_CONFIG } from '../config/api';
 
 // Constants
 const PRODUCT_CODE = 'tezdm';
@@ -69,7 +70,7 @@ export const profileApi = {
 
 
   /**
-   * Complete OAuth redirect with code and state
+   * Complete OAuth redirect with code and state (for authenticated users)
    */
   async completeOAuthRedirect(code: string, state: string): Promise<ApiResponse<void>> {
     const payload: OAuthRedirectRequest = { code, state };
@@ -78,6 +79,32 @@ export const profileApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  },
+
+  /**
+   * Complete OAuth redirect with code and state (for unauthenticated users)
+   */
+  async completeOAuthRedirectUnauthenticated(code: string, state: string): Promise<ApiResponse<void>> {
+    const payload: OAuthRedirectRequest = { code, state };
+    
+    // Direct API call without authentication token
+    const url = `${API_CONFIG.BASE_URL}/profile/oauth/auth_redirection/?product_code=${PRODUCT_CODE}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (data.status !== 1) {
+      throw new Error(data.message || 'API request failed');
+    }
+
+    return data;
   },
 
   /**

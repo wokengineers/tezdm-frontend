@@ -19,6 +19,18 @@ interface SignupRequest {
   name: string;
 }
 
+interface ForgotPasswordRequest {
+  credential: string;
+}
+
+interface ResetPasswordRequest {
+  password: string;
+  confirm_password: string;
+  otp_token: string;
+  hmac_signature_b64: string;
+  credential: string;
+}
+
 interface LoginResponse {
   access_token: string;
   refresh_token: string;
@@ -113,6 +125,44 @@ export const authApi = {
     };
 
     return this.makeRequest<void>(API_CONFIG.ENDPOINTS.AUTH.SIGNUP, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * Forgot password - send reset link to email
+   */
+  async forgotPassword(email: string): Promise<ApiResponse<void>> {
+    const payload: ForgotPasswordRequest = {
+      credential: email,
+    };
+
+    return this.makeRequest<void>(API_CONFIG.ENDPOINTS.AUTH.FORGOT_PASSWORD, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * Reset password with token and signature
+   */
+  async resetPassword(
+    password: string,
+    confirmPassword: string,
+    otpToken: string,
+    hmacSignature: string,
+    credential: string
+  ): Promise<ApiResponse<void>> {
+    const payload: ResetPasswordRequest = {
+      password: password,
+      confirm_password: confirmPassword,
+      otp_token: otpToken,
+      hmac_signature_b64: hmacSignature,
+      credential: credential,
+    };
+
+    return this.makeRequest<void>(API_CONFIG.ENDPOINTS.AUTH.RESET_PASSWORD, {
       method: 'POST',
       body: JSON.stringify(payload),
     });

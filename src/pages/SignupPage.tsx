@@ -18,34 +18,22 @@ const SignupPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [localError, setLocalError] = useState<string>('');
   
-  const { signup, error: authError, isLoading: authLoading } = useAuth();
+  const { signup, error: authError, isAuthLoading } = useAuth();
   const navigate = useNavigate();
 
   // Sync loading state with auth context
   useEffect(() => {
-    setIsLoading(authLoading);
-  }, [authLoading]);
+    setIsLoading(isAuthLoading);
+  }, [isAuthLoading]);
 
-  // Restore form data on component mount
-  useEffect(() => {
-    restoreFormData();
-  }, []);
 
-  // Preserve form data when any field changes
-  useEffect(() => {
-    if (name || email || password || confirmPassword) {
-      preserveFormData();
-    }
-  }, [name, email, password, confirmPassword, agreeToTerms]);
 
   // Handle auth errors
   useEffect(() => {
     if (authError) {
       setLocalError(authError);
-      // Ensure form data is preserved - don't clear any form fields
-      console.log('Auth error occurred, preserving form data:', { name, email, password: password ? '[REDACTED]' : '', confirmPassword: confirmPassword ? '[REDACTED]' : '' });
     }
-  }, [authError, name, email, password, confirmPassword]);
+  }, [authError]);
 
   /**
    * Validate email format
@@ -71,39 +59,7 @@ const SignupPage: React.FC = () => {
 
   const passwordValidation = validatePassword(password);
 
-  /**
-   * Ensure form data is preserved on errors
-   * This function can be called if form data gets cleared unexpectedly
-   */
-  const preserveFormData = () => {
-    // Store form data in sessionStorage as backup
-    sessionStorage.setItem('signup_form_data', JSON.stringify({
-      name,
-      email,
-      password,
-      confirmPassword,
-      agreeToTerms
-    }));
-  };
 
-  /**
-   * Restore form data from backup if needed
-   */
-  const restoreFormData = () => {
-    const savedData = sessionStorage.getItem('signup_form_data');
-    if (savedData) {
-      try {
-        const data = JSON.parse(savedData);
-        setName(data.name || '');
-        setEmail(data.email || '');
-        setPassword(data.password || '');
-        setConfirmPassword(data.confirmPassword || '');
-        setAgreeToTerms(data.agreeToTerms || false);
-      } catch (error) {
-        console.error('Error restoring form data:', error);
-      }
-    }
-  };
 
   /**
    * Handle form submission
@@ -159,12 +115,8 @@ const SignupPage: React.FC = () => {
 
     const success = await signup(name, email, password);
     if (success) {
-      // Clear saved form data on successful signup
-      sessionStorage.removeItem('signup_form_data');
       navigate('/login');
     }
-    // Note: Form data is intentionally preserved on API errors
-    // This allows users to fix the issue without re-entering all their data
   };
 
   return (

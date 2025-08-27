@@ -14,7 +14,7 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [localError, setLocalError] = useState<string>('');
   
-  const { login, error: authError, isLoading: authLoading } = useAuth();
+  const { login, error: authError, isAuthLoading } = useAuth();
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,41 +24,17 @@ const LoginPage: React.FC = () => {
 
   // Sync loading state with auth context
   useEffect(() => {
-    setIsLoading(authLoading);
-  }, [authLoading]);
+    setIsLoading(isAuthLoading);
+  }, [isAuthLoading]);
 
-  // Restore form data on component mount
-  useEffect(() => {
-    const savedData = sessionStorage.getItem('login_form_data');
-    if (savedData) {
-      try {
-        const data = JSON.parse(savedData);
-        setEmail(data.email || '');
-        setPassword(data.password || '');
-      } catch (error) {
-        console.error('Error restoring login form data:', error);
-      }
-    }
-  }, []);
 
-  // Preserve form data when fields change
-  useEffect(() => {
-    if (email || password) {
-      sessionStorage.setItem('login_form_data', JSON.stringify({
-        email,
-        password
-      }));
-    }
-  }, [email, password]);
 
   // Handle auth errors
   useEffect(() => {
     if (authError) {
       setLocalError(authError);
-      // Ensure form data is preserved - don't clear any form fields
-      console.log('Auth error occurred, preserving login form data:', { email, password: password ? '[REDACTED]' : '' });
     }
-  }, [authError, email, password]);
+  }, [authError]);
 
   /**
    * Validate email format
@@ -106,8 +82,6 @@ const LoginPage: React.FC = () => {
 
     const success = await login(email, password);
     if (success) {
-      // Clear saved form data on successful login
-      sessionStorage.removeItem('login_form_data');
       navigate('/dashboard');
     }
   };
@@ -177,9 +151,17 @@ const LoginPage: React.FC = () => {
 
             {/* Password field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300">
+                  Password
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-primary-400 hover:text-primary-300 transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-gray-400" />
