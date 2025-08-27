@@ -70,24 +70,12 @@ export const profileApi = {
 
 
   /**
-   * Complete OAuth redirect with code and state (for authenticated users)
+   * Complete OAuth redirect with code and state (Public - no auth required)
    */
   async completeOAuthRedirect(code: string, state: string): Promise<ApiResponse<void>> {
     const payload: OAuthRedirectRequest = { code, state };
     
-    return this.makeRequest<void>(`/profile/oauth/auth_redirection/?product_code=${PRODUCT_CODE}`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-  },
-
-  /**
-   * Complete OAuth redirect with code and state (for unauthenticated users)
-   */
-  async completeOAuthRedirectUnauthenticated(code: string, state: string): Promise<ApiResponse<void>> {
-    const payload: OAuthRedirectRequest = { code, state };
-    
-    // Direct API call without authentication token
+    // Use direct API call without authentication for OAuth redirect
     const url = `${API_CONFIG.BASE_URL}/profile/oauth/auth_redirection/?product_code=${PRODUCT_CODE}`;
     
     const response = await fetch(url, {
@@ -101,7 +89,7 @@ export const profileApi = {
     const data = await response.json();
 
     if (data.status !== 1) {
-      throw new Error(data.message || 'API request failed');
+      throw new Error(data.message || 'OAuth completion failed');
     }
 
     return data;
