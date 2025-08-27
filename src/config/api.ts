@@ -1,10 +1,12 @@
 // API Configurations
 export const API_CONFIG = {
-  BASE_URL: process.env.REACT_APP_API_BASE_URL || 'https://api.stage.wokengineers.com/v1',
+  BASE_URL: process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000/v1',
   ENDPOINTS: {
     AUTH: {
       LOGIN: '/ums/auth/email_password_authentication/login/',
       SIGNUP: '/ums/auth/email_password_authentication/signup/',
+      FORGOT_PASSWORD: '/ums/auth/email_password_authentication/forgot_password/',
+      RESET_PASSWORD: '/ums/auth/email_password_authentication/reset_password/',
       REFRESH_TOKEN: '/ums/auth/refresh_token',
       SIGNOUT: '/ums/auth/signout',
     },

@@ -83,11 +83,13 @@ A modern, scalable React-based frontend for an Instagram Automation Platform tha
 ### Authentication
 - **Login Page**: Email/password authentication with secure token management
 - **Signup Page**: User registration with email validation and password requirements (minimum 8 characters)
+- **Forgot Password**: Email-based password reset with secure token validation
+- **Reset Password**: Secure password reset with URL parameters and HMAC signature
 - **Protected Routes**: Secure access to authenticated features
 - **Token Management**: Encrypted token storage with automatic refresh
 - **Group-based Access**: Multi-group support with automatic group selection
 - **User Information**: Automatic fetching of user name and role from group memberships
-- **Form Data Preservation**: Form data is preserved on API errors for better UX
+
 
 ### Onboarding
 - **Step-by-step Guide**: Welcome, how it works, plan selection, account connection
@@ -112,6 +114,7 @@ A modern, scalable React-based frontend for an Instagram Automation Platform tha
 - **Multi-Platform**: Support for Facebook (active), WhatsApp, LinkedIn (coming soon)
 - **Account Status**: Connection status and management options
 - **Account Switcher**: Easy switching between multiple connected accounts
+- **Connected Accounts Required**: Users must connect Instagram accounts before creating automations
 
 ### Automation
 - **Automation List**: View all automation rules with edit/delete options

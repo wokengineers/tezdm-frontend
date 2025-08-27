@@ -13,7 +13,8 @@ import {
   AlertCircle,
   GitBranch,
   GitCommit,
-  Loader2
+  Loader2,
+  Link
 } from 'lucide-react';
 import { SecurityManager } from '../utils/securityManager';
 import { automationApi, TRIGGER_LABELS, ACTION_LABELS, ACTION_DESCRIPTIONS, TriggerActionConfig } from '../services/automationApi';
@@ -99,6 +100,12 @@ const AutomationBuilderPage: React.FC = () => {
   const [previewMode, setPreviewMode] = useState<boolean>(false);
   const [actionFlowType, setActionFlowType] = useState<'sequential' | 'parallel'>('sequential');
   
+  // Connected accounts state
+  const [connectedAccounts, setConnectedAccounts] = useState<any[]>([]);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState<boolean>(true);
+  const [hasConnectedAccounts, setHasConnectedAccounts] = useState<boolean>(false);
+  const [groupId, setGroupId] = useState<number | null>(null);
+
   // New state for trigger-action configuration
   const [triggerActionConfig, setTriggerActionConfig] = useState<TriggerActionConfig | null>(null);
   const [isLoadingConfig, setIsLoadingConfig] = useState<boolean>(true);
@@ -171,11 +178,19 @@ const AutomationBuilderPage: React.FC = () => {
       if (response.data && response.data.length > 0) {
         console.log('📸 Connected account data:', response.data[0]);
         setConnectedAccount(response.data[0]); // Use first account
+        setConnectedAccounts(response.data);
+        setHasConnectedAccounts(true);
+      } else {
+        setConnectedAccounts([]);
+        setHasConnectedAccounts(false);
       }
     } catch (error) {
       console.error('Failed to load connected account:', error);
+      setConnectedAccounts([]);
+      setHasConnectedAccounts(false);
     } finally {
       setIsLoadingAccount(false);
+      setIsLoadingAccounts(false);
     }
   };
 
@@ -1070,6 +1085,44 @@ const AutomationBuilderPage: React.FC = () => {
       // Users must complete each step in order
     }
   };
+
+  // Check if user has connected accounts
+  if (!isLoadingAccounts && !hasConnectedAccounts) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="mb-8">
+            <button
+              onClick={() => navigate('/automations')}
+              className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Automations
+            </button>
+          </div>
+
+          {/* No Connected Accounts Message */}
+          <div className="text-center py-12">
+            <Link className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              No Connected Accounts
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
+              You need to connect your Instagram account before creating automations.
+            </p>
+            <button 
+              onClick={() => navigate('/connect-accounts')}
+              className="btn-primary flex items-center mx-auto"
+            >
+              <Link className="w-4 h-4 mr-2" />
+              Connect Account
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

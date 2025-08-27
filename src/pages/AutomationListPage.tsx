@@ -6,9 +6,11 @@ import {
   Trash2, 
   MessageCircle,
   Instagram,
-  AlertTriangle
+  AlertTriangle,
+  Link
 } from 'lucide-react';
 import { automationApi, Automation, TriggerActionConfig, TRIGGER_LABELS } from '../services/automationApi';
+import { profileApi } from '../services/profileApi';
 import { SecurityManager } from '../utils/securityManager';
 
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -43,6 +45,11 @@ const AutomationListPage: React.FC = () => {
   const [groupId, setGroupId] = useState<number | null>(null);
   const [triggerActionConfig, setTriggerActionConfig] = useState<TriggerActionConfig | null>(null);
   const [isLoadingConfig, setIsLoadingConfig] = useState<boolean>(true);
+  
+  // Connected accounts state
+  const [connectedAccounts, setConnectedAccounts] = useState<any[]>([]);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState<boolean>(true);
+  const [hasConnectedAccounts, setHasConnectedAccounts] = useState<boolean>(false);
   
   // Delete confirmation modal state
   const [deleteModal, setDeleteModal] = useState<{
@@ -87,6 +94,26 @@ const AutomationListPage: React.FC = () => {
     }
   };
 
+  // Load connected accounts
+  const loadConnectedAccounts = async () => {
+    if (!groupId) return;
+    
+    try {
+      setIsLoadingAccounts(true);
+      console.log('🔗 Loading connected accounts...');
+      const response = await profileApi.getConnectedAccounts(groupId, 1);
+      console.log('✅ Connected accounts loaded:', response.data);
+      setConnectedAccounts(response.data);
+      setHasConnectedAccounts(response.data.length > 0);
+    } catch (error) {
+      console.error('❌ Failed to load connected accounts:', error);
+      setConnectedAccounts([]);
+      setHasConnectedAccounts(false);
+    } finally {
+      setIsLoadingAccounts(false);
+    }
+  };
+
   // Get group ID from tokens and load config
   useEffect(() => {
     const tokens = SecurityManager.getTokens();
@@ -97,6 +124,13 @@ const AutomationListPage: React.FC = () => {
     // Load trigger-action configuration on page load
     loadTriggerActionConfig();
   }, []);
+
+  // Load connected accounts when groupId is available
+  useEffect(() => {
+    if (groupId) {
+      loadConnectedAccounts();
+    }
+  }, [groupId]);
 
   // Fetch automations when filters change
   useEffect(() => {
@@ -285,15 +319,17 @@ const AutomationListPage: React.FC = () => {
             Create and manage your Instagram automations
           </p>
         </div>
-        <div className="flex items-center space-x-3">
-          <button 
-            onClick={() => navigate('/automations/new')}
-            className="btn-primary flex items-center"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Automation
-          </button>
-        </div>
+        {hasConnectedAccounts && (
+          <div className="flex items-center space-x-3">
+            <button 
+              onClick={() => navigate('/automations/new')}
+              className="btn-primary flex items-center"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create Automation
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Search and Filters */}
@@ -397,8 +433,30 @@ const AutomationListPage: React.FC = () => {
         </div>
       )}
 
+      {/* No Connected Accounts Message */}
+      {!isLoadingAccounts && !hasConnectedAccounts && (
+        <div className="card">
+          <div className="text-center py-12">
+            <Link className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              No Connected Accounts
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              You need to connect your Instagram account before creating automations.
+            </p>
+            <button 
+              onClick={() => navigate('/connect-accounts')}
+              className="btn-primary flex items-center mx-auto"
+            >
+              <Link className="w-4 h-4 mr-2" />
+              Connect Account
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Automation List */}
-      {!isLoadingAutomations && (
+      {!isLoadingAutomations && hasConnectedAccounts && (
         <div className="space-y-4">
           {sortedAutomations.length > 0 ? (
             sortedAutomations.map((automation) => (
@@ -501,7 +559,7 @@ const AutomationListPage: React.FC = () => {
                     : 'Create your first automation to get started.'
                   }
                 </p>
-                {!searchTerm && statusFilter === 'all' && typeFilter === 'all' && (
+                {!searchTerm && statusFilter === 'all' && typeFilter === 'all' && hasConnectedAccounts && (
                   <div className="flex items-center justify-center space-x-3">
                     <button 
                       onClick={() => navigate('/automations/new')}

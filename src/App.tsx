@@ -6,6 +6,8 @@ import { AuthProvider } from './contexts/AuthContext';
 // Import pages
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import OnboardingPage from './pages/OnboardingPage';
 import ConnectAccountsPage from './pages/ConnectAccountsPage';
 import OAuthRedirectPage from './pages/OAuthRedirectPage';
@@ -44,6 +46,16 @@ const App: React.FC = () => {
               <Route path="/signup" element={
                 <PublicRoute>
                   <SignupPage />
+                </PublicRoute>
+              } />
+              <Route path="/forgot-password" element={
+                <PublicRoute>
+                  <ForgotPasswordPage />
+                </PublicRoute>
+              } />
+              <Route path="/forgot-password/:otpToken/:email/:hmacSignature" element={
+                <PublicRoute>
+                  <ResetPasswordPage />
                 </PublicRoute>
               } />
               <Route path="/oauth-redirect" element={<OAuthRedirectPage />} />

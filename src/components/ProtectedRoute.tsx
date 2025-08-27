@@ -15,10 +15,10 @@ interface ProtectedRouteProps {
  * @returns Protected route component or redirect to login
  */
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isAuthLoading } = useAuth();
 
-  // Show loading state while checking authentication
-  if (isLoading) {
+  // Show loading state while checking authentication (but not during auth operations)
+  if (isLoading && !isAuthLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">

@@ -32,6 +32,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isAuthLoading: boolean; // Added for auth operation loading state
   login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -47,6 +48,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  isAuthLoading: false, // Added for auth operation loading state
   login: async () => false,
   signup: async () => false,
   logout: () => {},
@@ -70,6 +72,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(false); // Separate loading state for auth operations
   const [error, setError] = useState<string | null>(null);
 
   /**
@@ -85,7 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      setIsLoading(true);
+      setIsAuthLoading(true);
       setError(null);
       
       // Step 1: Login and get initial tokens
@@ -147,7 +150,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError(error instanceof Error ? error.message : 'Login failed. Please try again.');
       return false;
     } finally {
-      setIsLoading(false);
+      setIsAuthLoading(false);
     }
   };
 
@@ -160,7 +163,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const signup = async (name: string, email: string, password: string): Promise<boolean> => {
     try {
-      setIsLoading(true);
+      setIsAuthLoading(true);
       setError(null);
       
       // Call signup API
@@ -173,7 +176,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError(error instanceof Error ? error.message : 'Signup failed. Please try again.');
       return false;
     } finally {
-      setIsLoading(false);
+      setIsAuthLoading(false);
     }
   };
 
@@ -267,6 +270,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     isAuthenticated,
     isLoading,
+    isAuthLoading,
     login,
     signup,
     logout,
