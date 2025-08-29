@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Smartphone, ExternalLink, Zap } from 'lucide-react';
+import { X, Smartphone, ExternalLink, Zap, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import QRCode from 'qrcode';
+import { profileApi } from '../services/profileApi';
 
 interface OAuthModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface OAuthModalProps {
   oauthUrl: string;
   onDirectRedirect: () => void;
   onBackToPlatforms: () => void;
+  onSuccess?: () => void;
 }
 
 /**
@@ -21,9 +23,107 @@ const OAuthModal: React.FC<OAuthModalProps> = ({
   oauthUrl,
   onDirectRedirect,
   onBackToPlatforms,
+  onSuccess,
 }) => {
   const qrCodeRef = useRef<HTMLCanvasElement>(null);
   const [qrCodeLoading, setQrCodeLoading] = useState<boolean>(false);
+  
+  // Polling state
+  const [pollingState, setPollingState] = useState<'idle' | 'polling' | 'success' | 'error' | 'timeout'>('idle');
+  const [pollingError, setPollingError] = useState<string>('');
+  const [timeRemaining, setTimeRemaining] = useState<number>(300); // 5 minutes
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Extract state parameter from OAuth URL
+  const extractStateFromUrl = (url: string): string | null => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.searchParams.get('state');
+    } catch (error) {
+      console.error('Failed to parse OAuth URL:', error);
+      return null;
+    }
+  };
+
+  // Start polling for OAuth status
+  const startPolling = async (state: string) => {
+    setPollingState('polling');
+    setTimeRemaining(300);
+    setPollingError('');
+
+    // Start countdown timer
+    timeoutIntervalRef.current = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          setPollingState('timeout');
+          stopPolling();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Start polling
+    pollingIntervalRef.current = setInterval(async () => {
+      try {
+        const response = await profileApi.getOAuthStatus(state);
+        
+        if (response.data.state === 'token_available') {
+          setPollingState('success');
+          stopPolling();
+          
+          // Show success for 2 seconds then close popup and refresh
+          setTimeout(() => {
+            // Dispatch event to refresh sidebar accounts
+            window.dispatchEvent(new Event('accountConnected'));
+            onSuccess?.();
+            onBackToPlatforms();
+          }, 2000);
+        }
+        // If state is still 'pending', continue polling
+      } catch (error) {
+        console.error('Polling error:', error);
+        setPollingState('error');
+        setPollingError(error instanceof Error ? error.message : 'Polling failed');
+        stopPolling();
+      }
+    }, 1000);
+  };
+
+  // Stop polling and cleanup
+  const stopPolling = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    if (timeoutIntervalRef.current) {
+      clearInterval(timeoutIntervalRef.current);
+      timeoutIntervalRef.current = null;
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
+  }, []);
+
+  // Start polling when modal opens
+  useEffect(() => {
+    if (isOpen && oauthUrl) {
+      const state = extractStateFromUrl(oauthUrl);
+      if (state) {
+        startPolling(state);
+      }
+    } else {
+      stopPolling();
+      setPollingState('idle');
+      setPollingError('');
+      setTimeRemaining(300);
+    }
+  }, [isOpen, oauthUrl]);
 
   useEffect(() => {
     if (isOpen && oauthUrl && qrCodeRef.current) {
@@ -151,12 +251,81 @@ const OAuthModal: React.FC<OAuthModalProps> = ({
             
             <button
               onClick={onDirectRedirect}
-              className="w-full btn-primary flex items-center justify-center space-x-2 py-2"
+              disabled={pollingState === 'success' || pollingState === 'error' || pollingState === 'timeout'}
+              className="w-full btn-primary flex items-center justify-center space-x-2 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ExternalLink className="w-3 h-3" />
               <span className="text-sm">Connect {platformName}</span>
             </button>
           </div>
+
+          {/* Polling Status */}
+          {pollingState === 'polling' && (
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                    Connecting to {platformName}...
+                  </p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    Time remaining: {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Success State */}
+          {pollingState === 'success' && (
+            <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <div>
+                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                    Successfully connected!
+                  </p>
+                  <p className="text-xs text-green-700 dark:text-green-300">
+                    Your {platformName} account is now ready for automation
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {pollingState === 'error' && (
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-red-500" />
+                <div>
+                  <p className="text-sm font-medium text-red-900 dark:text-red-100">
+                    Connection failed
+                  </p>
+                  <p className="text-xs text-red-700 dark:text-red-300">
+                    {pollingError}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Timeout State */}
+          {pollingState === 'timeout' && (
+            <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4 text-amber-500" />
+                <div>
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                    Connection timeout
+                  </p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    Please try again or use the direct connect option
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Instructions */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">

@@ -42,6 +42,10 @@ interface OAuthRedirectRequest {
   state: string;
 }
 
+interface OAuthStatusResponse {
+  state: string;
+}
+
 /**
  * Profile API service for OAuth connections
  */
@@ -93,6 +97,13 @@ export const profileApi = {
     }
 
     return data;
+  },
+
+  /**
+   * Get OAuth status (requires authentication)
+   */
+  async getOAuthStatus(state: string): Promise<ApiResponse<OAuthStatusResponse>> {
+    return this.makeRequest<OAuthStatusResponse>(`/profile/oauth/auth_redirection/status/?state=${state}`);
   },
 
   /**

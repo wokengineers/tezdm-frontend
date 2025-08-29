@@ -183,6 +183,8 @@ const ConnectAccountsPage: React.FC = () => {
       console.log('Account deleted successfully');
       // Reload connected accounts after successful deletion
       await loadConnectedAccounts();
+      // Dispatch event to refresh sidebar accounts
+      window.dispatchEvent(new Event('accountConnected'));
       setError('');
     } catch (error) {
       console.error('Failed to delete account:', error);
@@ -609,6 +611,10 @@ const ConnectAccountsPage: React.FC = () => {
           oauthUrl={oauthUrl}
           onDirectRedirect={handleDirectRedirect}
           onBackToPlatforms={handleBackToPlatforms}
+          onSuccess={() => {
+            // Refresh connected accounts after successful connection
+            loadConnectedAccounts();
+          }}
         />
 
         {/* Confirmation Modal for Account Deletion */}

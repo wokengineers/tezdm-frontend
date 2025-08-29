@@ -38,6 +38,7 @@ interface AuthContextType {
   logout: () => void;
   signout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
+  clearError: () => void;
   error: string | null;
 }
 
@@ -54,6 +55,7 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
   signout: async () => {},
   updateUser: () => {},
+  clearError: () => {},
   error: null,
 });
 
@@ -276,6 +278,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     signout,
     updateUser,
+    clearError: () => setError(null),
     error,
   };
 

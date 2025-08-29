@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, Plus, X, Info, Tag, Trash2 } from 'lucide-react';
+import { AlertCircle, Plus, X, Info, Tag, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 
 // Types for form validation
 interface ValidationError {
@@ -15,6 +15,13 @@ interface FormValidation {
 interface Template {
   id: string;
   text: string;
+}
+
+interface Button {
+  id: string;
+  label: string;
+  link: string;
+  order: number;
 }
 
 // Base form props interface
@@ -757,20 +764,99 @@ export const UserDirectMessageTriggerForm: React.FC<BaseFormProps> = ({ config, 
 };
 
 /**
- * Compact Reply Event Action Form
+ * Compact Reply Event Action Form with Action Buttons
  */
 export const ReplyEventActionForm: React.FC<BaseFormProps> = ({ config, onChange, errors }) => {
-  const selectSampleTemplate = (template: string) => {
-    handleChange('template', template);
-  };
-  const validateForm = (): FormValidation => {
-    const errors: ValidationError[] = [];
+  const [showAddButtonModal, setShowAddButtonModal] = useState(false);
+  const [newButtonLabel, setNewButtonLabel] = useState('');
+  const [newButtonLink, setNewButtonLink] = useState('');
+  const [buttonErrors, setButtonErrors] = useState<string[]>([]);
 
-    if (!config.template || config.template.trim() === '') {
-      errors.push({ field: 'template', message: 'Reply template is required' });
+  // Initialize with default message if empty
+  React.useEffect(() => {
+    if (!config.template) {
+      const defaultMessage = "Hey 👋 glad you reached out! Check this out: [your link or offer here]";
+      onChange({ ...config, template: defaultMessage });
+    }
+  }, []);
+
+  const buttons: Button[] = config.buttons || [];
+
+  const validateButton = (label: string, link: string): string[] => {
+    const errors: string[] = [];
+    
+    if (!label.trim()) {
+      errors.push('Button label is required');
+    }
+    
+    if (!link.trim()) {
+      errors.push('Button link is required');
+    } else if (!link.startsWith('https://')) {
+      errors.push('Button link must start with https://');
+    }
+    
+    return errors;
+  };
+
+  const addButton = () => {
+    const errors = validateButton(newButtonLabel, newButtonLink);
+    if (errors.length > 0) {
+      setButtonErrors(errors);
+      return;
     }
 
-    return { isValid: errors.length === 0, errors };
+    if (buttons.length >= 3) {
+      setButtonErrors(['Maximum 3 buttons allowed']);
+      return;
+    }
+
+    const newButton: Button = {
+      id: `btn_${Date.now()}`,
+      label: newButtonLabel.trim(),
+      link: newButtonLink.trim(),
+      order: buttons.length
+    };
+
+    const updatedButtons = [...buttons, newButton];
+    onChange({ ...config, buttons: updatedButtons });
+    
+    // Reset form
+    setNewButtonLabel('');
+    setNewButtonLink('');
+    setButtonErrors([]);
+    setShowAddButtonModal(false);
+  };
+
+  const deleteButton = (buttonId: string) => {
+    const updatedButtons = buttons.filter(btn => btn.id !== buttonId);
+    onChange({ ...config, buttons: updatedButtons });
+  };
+
+  const moveButton = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    
+    const updatedButtons = [...buttons];
+    const [movedButton] = updatedButtons.splice(fromIndex, 1);
+    updatedButtons.splice(toIndex, 0, movedButton);
+    
+    // Update order
+    updatedButtons.forEach((btn, index) => {
+      btn.order = index;
+    });
+    
+    onChange({ ...config, buttons: updatedButtons });
+  };
+
+  const moveButtonUp = (index: number) => {
+    if (index > 0) {
+      moveButton(index, index - 1);
+    }
+  };
+
+  const moveButtonDown = (index: number) => {
+    if (index < buttons.length - 1) {
+      moveButton(index, index + 1);
+    }
   };
 
   const handleChange = (field: string, value: any) => {
@@ -782,6 +868,7 @@ export const ReplyEventActionForm: React.FC<BaseFormProps> = ({ config, onChange
 
   return (
     <div className="space-y-4">
+      {/* Message Template */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Reply Template *
@@ -789,14 +876,160 @@ export const ReplyEventActionForm: React.FC<BaseFormProps> = ({ config, onChange
         <textarea
           value={config.template || ''}
           onChange={(e) => handleChange('template', e.target.value)}
-          placeholder="Write your reply message here..."
-          rows={3}
+          placeholder="Hey 👋 glad you reached out! Check this out: [your link or offer here]"
+          rows={4}
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
         />
-
       </div>
 
-      {/* Error Display */}
+      {/* Action Buttons Section */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Action Buttons ({buttons.length}/3)
+        </label>
+        
+        {/* Buttons List */}
+        <div className="space-y-1">
+          {buttons.map((button, index) => (
+            <div 
+              key={button.id} 
+              data-button-index={index}
+              className="flex items-center space-x-1.5 p-1.5 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              {/* Move Buttons */}
+              <div className="flex flex-col space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => moveButtonUp(index)}
+                  disabled={index === 0}
+                  className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="Move up"
+                >
+                  <ChevronUp className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveButtonDown(index)}
+                  disabled={index === buttons.length - 1}
+                  className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="Move down"
+                >
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+              </div>
+              
+              {/* Button Content */}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                  {button.label}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px]">
+                  {button.link}
+                </div>
+              </div>
+              
+              {/* Delete Button */}
+              <button
+                type="button"
+                onClick={() => deleteButton(button.id)}
+                className="p-1 text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors"
+                title="Delete button"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Add Button */}
+        {buttons.length < 3 && (
+          <button
+            type="button"
+            onClick={() => setShowAddButtonModal(true)}
+            className="w-full mt-2 p-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 hover:border-primary-400 dark:hover:border-primary-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors flex items-center justify-center space-x-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="text-sm">✨ Add Action Button</span>
+          </button>
+        )}
+      </div>
+
+      {/* Add Button Modal */}
+      {showAddButtonModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              ✨ Add Action Button
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Button Label
+                </label>
+                <input
+                  type="text"
+                  value={newButtonLabel}
+                  onChange={(e) => setNewButtonLabel(e.target.value)}
+                  placeholder="🛍️ Shop Now"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Button Link (HTTPS only)
+                </label>
+                <input
+                  type="url"
+                  value={newButtonLink}
+                  onChange={(e) => setNewButtonLink(e.target.value)}
+                  placeholder="https://example.com"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                />
+              </div>
+
+              {/* Button Errors */}
+              {buttonErrors.length > 0 && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                  <div className="flex items-start">
+                    <AlertCircle className="w-4 h-4 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-red-700 dark:text-red-300">
+                      {buttonErrors.map((error, index) => (
+                        <p key={index} className={index > 0 ? 'mt-1' : ''}>• {error}</p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddButtonModal(false);
+                  setNewButtonLabel('');
+                  setNewButtonLink('');
+                  setButtonErrors([]);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={addButton}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                Add Button
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Form Errors */}
       {allErrors.length > 0 && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
           <div className="flex items-start">
@@ -903,7 +1136,7 @@ export const ReplyToCommentForm: React.FC<BaseFormProps> = ({ config, onChange, 
           Reply Templates (Random Selection) *
         </label>
         <p className="text-xs text-gray-500 mb-4">
-          One template will be randomly selected when replying to comments.
+          I will choose one reply randomly to keep the comments more natural and engaging.
         </p>
 
         {/* Templates List */}
@@ -915,7 +1148,7 @@ export const ReplyToCommentForm: React.FC<BaseFormProps> = ({ config, onChange, 
                 onChange={(e) => handleTextareaChange(index, e)}
                 placeholder="Enter your reply message..."
                 rows={1}
-                className="auto-resize-textarea w-full px-4 py-2 pr-10 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 text-sm resize-none"
+                className="auto-resize-textarea w-full px-4 py-2 pr-10 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 hover:border-primary-400 dark:hover:border-primary-400 transition-all duration-200 text-sm resize-none"
               />
               {templates.length > 1 && (
                 <button
@@ -955,7 +1188,7 @@ export const ReplyToCommentForm: React.FC<BaseFormProps> = ({ config, onChange, 
           <div className="flex items-start">
             <Info className="w-4 h-4 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
             <div className="text-sm text-blue-700 dark:text-blue-300">
-              One template will be randomly selected when replying to comments.
+              I will choose one reply randomly to keep the comments more natural and engaging.
             </div>
           </div>
         </div>
@@ -1175,6 +1408,384 @@ export const WebhookEventActionForm: React.FC<BaseFormProps> = ({ config, onChan
 };
 
 /**
+ * Send DM Form with Action Buttons
+ */
+export const SendDmForm: React.FC<BaseFormProps> = ({ config, onChange, errors }) => {
+  const [showAddButtonModal, setShowAddButtonModal] = useState(false);
+  const [newButtonLabel, setNewButtonLabel] = useState('');
+  const [newButtonLink, setNewButtonLink] = useState('');
+  const [buttonErrors, setButtonErrors] = useState<string[]>([]);
+
+  // Initialize with default message if empty
+  React.useEffect(() => {
+    if (!config.template) {
+      const defaultMessage = "Hey 👋 glad you reached out! Check this out: [your link or offer here]";
+      onChange({ ...config, template: defaultMessage });
+    }
+  }, []);
+
+  const buttons: Button[] = config.buttons || [];
+
+  const validateButton = (label: string, link: string): string[] => {
+    const errors: string[] = [];
+    
+    if (!label.trim()) {
+      errors.push('Button label is required');
+    }
+    
+    if (!link.trim()) {
+      errors.push('Button link is required');
+    } else if (!link.startsWith('https://')) {
+      errors.push('Button link must start with https://');
+    }
+    
+    return errors;
+  };
+
+  const addButton = () => {
+    const errors = validateButton(newButtonLabel, newButtonLink);
+    if (errors.length > 0) {
+      setButtonErrors(errors);
+      return;
+    }
+
+    if (buttons.length >= 3) {
+      setButtonErrors(['Maximum 3 buttons allowed']);
+      return;
+    }
+
+    const newButton: Button = {
+      id: `btn_${Date.now()}`,
+      label: newButtonLabel.trim(),
+      link: newButtonLink.trim(),
+      order: buttons.length
+    };
+
+    const updatedButtons = [...buttons, newButton];
+    onChange({ ...config, buttons: updatedButtons });
+    
+    // Reset form
+    setNewButtonLabel('');
+    setNewButtonLink('');
+    setButtonErrors([]);
+    setShowAddButtonModal(false);
+  };
+
+  const deleteButton = (buttonId: string) => {
+    const updatedButtons = buttons.filter(btn => btn.id !== buttonId);
+    onChange({ ...config, buttons: updatedButtons });
+  };
+
+  const moveButton = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    
+    const updatedButtons = [...buttons];
+    const [movedButton] = updatedButtons.splice(fromIndex, 1);
+    updatedButtons.splice(toIndex, 0, movedButton);
+    
+    // Update order
+    updatedButtons.forEach((btn, index) => {
+      btn.order = index;
+    });
+    
+    onChange({ ...config, buttons: updatedButtons });
+  };
+
+  const moveButtonUp = (index: number) => {
+    if (index > 0) {
+      moveButton(index, index - 1);
+    }
+  };
+
+  const moveButtonDown = (index: number) => {
+    if (index < buttons.length - 1) {
+      moveButton(index, index + 1);
+    }
+  };
+
+  const handleChange = (field: string, value: any) => {
+    const newConfig = { ...config, [field]: value };
+    onChange(newConfig);
+  };
+
+  const allErrors = errors || [];
+
+  return (
+    <div className="space-y-4">
+      {/* Message Template */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Message Template *
+        </label>
+        <textarea
+          value={config.template || ''}
+          onChange={(e) => handleChange('template', e.target.value)}
+          placeholder="Hey 👋 glad you reached out! Check this out: [your link or offer here]"
+          rows={4}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+        />
+      </div>
+
+      {/* Action Buttons Section */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Action Buttons ({buttons.length}/3)
+        </label>
+        
+        {/* Buttons List */}
+        <div className="space-y-1">
+          {buttons.map((button, index) => (
+            <div 
+              key={button.id} 
+              data-button-index={index}
+              className="flex items-center space-x-1.5 p-1.5 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              {/* Move Buttons */}
+              <div className="flex flex-col space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => moveButtonUp(index)}
+                  disabled={index === 0}
+                  className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="Move up"
+                >
+                  <ChevronUp className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveButtonDown(index)}
+                  disabled={index === buttons.length - 1}
+                  className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="Move down"
+                >
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+              </div>
+              
+              {/* Button Content */}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                  {button.label}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px]">
+                  {button.link}
+                </div>
+              </div>
+              
+              {/* Delete Button */}
+              <button
+                type="button"
+                onClick={() => deleteButton(button.id)}
+                className="p-1 text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors"
+                title="Delete button"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Add Button */}
+        {buttons.length < 3 && (
+          <button
+            type="button"
+            onClick={() => setShowAddButtonModal(true)}
+            className="w-full mt-2 p-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 hover:border-primary-400 dark:hover:border-primary-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors flex items-center justify-center space-x-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="text-sm">✨ Add Action Button</span>
+          </button>
+        )}
+      </div>
+
+      {/* Add Button Modal */}
+      {showAddButtonModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              ✨ Add Action Button
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Button Label
+                </label>
+                <input
+                  type="text"
+                  value={newButtonLabel}
+                  onChange={(e) => setNewButtonLabel(e.target.value)}
+                  placeholder="🛍️ Shop Now"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Button Link (HTTPS only)
+                </label>
+                <input
+                  type="url"
+                  value={newButtonLink}
+                  onChange={(e) => setNewButtonLink(e.target.value)}
+                  placeholder="https://example.com"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                />
+              </div>
+
+              {/* Button Errors */}
+              {buttonErrors.length > 0 && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                  <div className="flex items-start">
+                    <AlertCircle className="w-4 h-4 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-red-700 dark:text-red-300">
+                      {buttonErrors.map((error, index) => (
+                        <p key={index} className={index > 0 ? 'mt-1' : ''}>• {error}</p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddButtonModal(false);
+                  setNewButtonLabel('');
+                  setNewButtonLink('');
+                  setButtonErrors([]);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={addButton}
+                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                Add Button
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Form Errors */}
+      {allErrors.length > 0 && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+          <div className="flex items-start">
+            <AlertCircle className="w-4 h-4 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-red-700 dark:text-red-300">
+              {allErrors.map((error, index) => (
+                <p key={index} className={index > 0 ? 'mt-1' : ''}>• {error.message}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Ask to Follow Form
+ */
+export const AskToFollowForm: React.FC<BaseFormProps> = ({ config, onChange, errors }) => {
+  // Initialize with default message and button text only on first load
+  React.useEffect(() => {
+    if (config.template === undefined && config.button_text === undefined) {
+      const defaultMessage = "Follow me for exciting offers and exclusive content! 🚀";
+      const defaultButtonText = "✅ I am following";
+      onChange({ 
+        ...config, 
+        template: defaultMessage,
+        button_text: defaultButtonText
+      });
+    }
+  }, []);
+
+  const validateForm = (): FormValidation => {
+    const validationErrors: ValidationError[] = [];
+
+    if (!config.template || config.template.trim() === '') {
+      validationErrors.push({ field: 'template', message: 'Message template is required' });
+    }
+
+    if (!config.button_text || config.button_text.trim() === '') {
+      validationErrors.push({ field: 'button_text', message: 'Follow button text is required' });
+    }
+
+    return { isValid: validationErrors.length === 0, errors: validationErrors };
+  };
+
+  const handleChange = (field: string, value: any) => {
+    const newConfig = { ...config, [field]: value };
+    onChange(newConfig);
+  };
+
+  const allErrors = errors || [];
+
+  return (
+    <div className="space-y-4">
+      {/* Message Template */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Message Template *
+        </label>
+        <textarea
+          value={config.template || ''}
+          onChange={(e) => handleChange('template', e.target.value)}
+          placeholder="Follow me for exciting offers and exclusive content! 🚀"
+          rows={4}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+        />
+      </div>
+
+      {/* Follow Button Text */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Follow Button Text *
+        </label>
+        <input
+          type="text"
+          value={config.button_text || ''}
+          onChange={(e) => handleChange('button_text', e.target.value)}
+          placeholder="✅ I am following"
+          className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+        />
+      </div>
+
+      {/* Info Box */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
+        <div className="flex items-start">
+          <Info className="w-4 h-4 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-blue-700 dark:text-blue-300">
+            This action encourages users to follow your account.
+          </div>
+        </div>
+      </div>
+
+      {/* Form Errors */}
+      {allErrors.length > 0 && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+          <div className="flex items-start">
+            <AlertCircle className="w-4 h-4 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-red-700 dark:text-red-300">
+              {allErrors.map((error, index) => (
+                <p key={index} className={index > 0 ? 'mt-1' : ''}>• {error.message}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
  * Form factory function to get the appropriate form component
  */
 export const getEventForm = (eventCategory: string) => {
@@ -1196,7 +1807,9 @@ export const getEventForm = (eventCategory: string) => {
     case 'send_dm_webhook':
       return SendDmWebhookForm;
     case 'send_dm':
-      return ReplyEventActionForm; // Send DM uses the same form as reply
+      return SendDmForm; // Send DM with action buttons
+    case 'ask_to_follow':
+      return AskToFollowForm; // Ask to follow form
     default:
       return null;
   }
