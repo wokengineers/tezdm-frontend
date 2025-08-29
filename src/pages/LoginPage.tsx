@@ -14,7 +14,7 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [localError, setLocalError] = useState<string>('');
   
-  const { login, error: authError, isAuthLoading } = useAuth();
+  const { login, error: authError, isAuthLoading, clearError } = useAuth();
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,6 +28,11 @@ const LoginPage: React.FC = () => {
   }, [isAuthLoading]);
 
 
+
+  // Clear any existing errors when component mounts
+  useEffect(() => {
+    clearError();
+  }, []);
 
   // Handle auth errors
   useEffect(() => {
@@ -57,6 +62,7 @@ const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setLocalError('');
+    clearError(); // Clear any auth context errors
     
     // Validate email
     if (!email.trim()) {
@@ -223,6 +229,7 @@ const LoginPage: React.FC = () => {
               Don't have an account?{' '}
               <Link
                 to="/signup"
+                onClick={() => clearError()}
                 className="font-medium text-primary-400 hover:text-primary-300 transition-colors"
               >
                 Sign up

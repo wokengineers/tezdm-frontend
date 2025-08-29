@@ -44,6 +44,8 @@ interface EventConfig {
   all_messages?: boolean;
   template?: string;
   endpoint?: string;
+  buttons?: Array<{ label: string; link: string }>;
+  button_text?: string;
 }
 
 interface Event {
@@ -687,7 +689,16 @@ const AutomationBuilderPage: React.FC = () => {
           const value = (config as any)[key];
           if (value !== null && value !== undefined && 
               !(Array.isArray(value) && value.length === 0)) {
-            filtered[key] = value;
+            
+            // Special handling for buttons array - only send label and link
+            if (key === 'buttons' && Array.isArray(value)) {
+              filtered[key] = value.map(button => ({
+                label: button.label,
+                link: button.link
+              }));
+            } else {
+              filtered[key] = value;
+            }
           }
         });
         break;
@@ -984,6 +995,14 @@ const AutomationBuilderPage: React.FC = () => {
               case 'send_dm':
                 if (!config.template || config.template.trim() === '') {
                   errors.push({ field: `action_${index}`, message: 'Reply template is required' });
+                }
+                break;
+              case 'ask_to_follow':
+                if (!config.template || config.template.trim() === '') {
+                  errors.push({ field: `action_${index}`, message: 'Message template is required' });
+                }
+                if (!config.button_text || config.button_text.trim() === '') {
+                  errors.push({ field: `action_${index}`, message: 'Follow button text is required' });
                 }
                 break;
                 
@@ -1977,6 +1996,16 @@ const SequenceDiagram: React.FC<{ workflow: Workflow; actionFlowType: 'sequentia
                     {action.event_config.template && (
                       <p className="text-xs text-green-500 mt-1 truncate">
                         "{action.event_config.template}"
+                      </p>
+                    )}
+                    {action.event_config.buttons && action.event_config.buttons.length > 0 && (
+                      <p className="text-xs text-green-500 mt-1">
+                        {action.event_config.buttons.length} button{action.event_config.buttons.length !== 1 ? 's' : ''}
+                      </p>
+                    )}
+                    {action.event_config.button_text && (
+                      <p className="text-xs text-green-500 mt-1">
+                        Button: "{action.event_config.button_text}"
                       </p>
                     )}
                   </div>

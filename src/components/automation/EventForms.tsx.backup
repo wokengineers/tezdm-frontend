@@ -24,6 +24,21 @@ interface Button {
   order: number;
 }
 
+// Helper function to convert internal button format to API format
+const convertButtonsToApiFormat = (buttons: Button[]) => {
+  return buttons.map(({ label, link }) => ({ label, link }));
+};
+
+// Helper function to convert API format to internal format for UI
+const convertApiToInternalFormat = (apiButtons: any[]) => {
+  return (apiButtons || []).map((btn: any, index: number) => ({
+    id: `btn_${index}`,
+    label: btn.label,
+    link: btn.link,
+    order: index
+  }));
+};
+
 // Base form props interface
 interface BaseFormProps {
   config: any;
@@ -1691,101 +1706,6 @@ export const SendDmForm: React.FC<BaseFormProps> = ({ config, onChange, errors }
 };
 
 /**
- * Ask to Follow Form
- */
-export const AskToFollowForm: React.FC<BaseFormProps> = ({ config, onChange, errors }) => {
-  // Initialize with default message and button text only on first load
-  React.useEffect(() => {
-    if (config.template === undefined && config.button_text === undefined) {
-      const defaultMessage = "Follow me for exciting offers and exclusive content! 🚀";
-      const defaultButtonText = "✅ I am following";
-      onChange({ 
-        ...config, 
-        template: defaultMessage,
-        button_text: defaultButtonText
-      });
-    }
-  }, []);
-
-  const validateForm = (): FormValidation => {
-    const validationErrors: ValidationError[] = [];
-
-    if (!config.template || config.template.trim() === '') {
-      validationErrors.push({ field: 'template', message: 'Message template is required' });
-    }
-
-    if (!config.button_text || config.button_text.trim() === '') {
-      validationErrors.push({ field: 'button_text', message: 'Follow button text is required' });
-    }
-
-    return { isValid: validationErrors.length === 0, errors: validationErrors };
-  };
-
-  const handleChange = (field: string, value: any) => {
-    const newConfig = { ...config, [field]: value };
-    onChange(newConfig);
-  };
-
-  const allErrors = errors || [];
-
-  return (
-    <div className="space-y-4">
-      {/* Message Template */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Message Template *
-        </label>
-        <textarea
-          value={config.template || ''}
-          onChange={(e) => handleChange('template', e.target.value)}
-          placeholder="Follow me for exciting offers and exclusive content! 🚀"
-          rows={4}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-        />
-      </div>
-
-      {/* Follow Button Text */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Follow Button Text *
-        </label>
-        <input
-          type="text"
-          value={config.button_text || ''}
-          onChange={(e) => handleChange('button_text', e.target.value)}
-          placeholder="✅ I am following"
-          className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-        />
-      </div>
-
-      {/* Info Box */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
-        <div className="flex items-start">
-          <Info className="w-4 h-4 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
-          <div className="text-sm text-blue-700 dark:text-blue-300">
-            This action encourages users to follow your account.
-          </div>
-        </div>
-      </div>
-
-      {/* Form Errors */}
-      {allErrors.length > 0 && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-          <div className="flex items-start">
-            <AlertCircle className="w-4 h-4 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-red-700 dark:text-red-300">
-              {allErrors.map((error, index) => (
-                <p key={index} className={index > 0 ? 'mt-1' : ''}>• {error.message}</p>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-/**
  * Form factory function to get the appropriate form component
  */
 export const getEventForm = (eventCategory: string) => {
@@ -1808,8 +1728,6 @@ export const getEventForm = (eventCategory: string) => {
       return SendDmWebhookForm;
     case 'send_dm':
       return SendDmForm; // Send DM with action buttons
-    case 'ask_to_follow':
-      return AskToFollowForm; // Ask to follow form
     default:
       return null;
   }

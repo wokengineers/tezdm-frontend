@@ -16,7 +16,9 @@ import {
   User,
   ChevronDown,
   Plus,
-  Instagram
+  Instagram,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -25,40 +27,13 @@ import { profileApi } from '../services/profileApi';
 import { SecurityManager } from '../utils/securityManager';
 
 /**
- * Custom sidebar toggle icon component
+ * Sidebar toggle icon component
  */
 const SidebarToggleIcon: React.FC<{ isCollapsed: boolean }> = ({ isCollapsed }) => {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="transition-all duration-200"
-    >
-      <rect
-        x="2"
-        y="2"
-        width="12"
-        height="12"
-        rx="2"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        fill="none"
-      />
-      {isCollapsed ? (
-        // Collapsed state - three lines on the left
-        <>
-          <line x1="4" y1="5" x2="6" y2="5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="4" y1="8" x2="6" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="4" y1="11" x2="6" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </>
-      ) : (
-        // Expanded state - empty space
-        <></>
-      )}
-    </svg>
+  return isCollapsed ? (
+    <PanelLeftOpen className="w-5 h-5" />
+  ) : (
+    <PanelLeftClose className="w-5 h-5" />
   );
 };
 
@@ -96,24 +71,39 @@ const Layout: React.FC = () => {
   /**
    * Fetch connected accounts from API
    */
-  useEffect(() => {
-    const fetchConnectedAccounts = async () => {
-      try {
-        setIsLoadingAccounts(true);
-        const tokens = SecurityManager.getTokens();
-        if (tokens && tokens.group_id) {
-          const response = await profileApi.getConnectedAccounts(tokens.group_id, 1);
-          setConnectedAccounts(response.data || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch connected accounts:', error);
-        setConnectedAccounts([]);
-      } finally {
-        setIsLoadingAccounts(false);
+  const fetchConnectedAccounts = async () => {
+    try {
+      setIsLoadingAccounts(true);
+      const tokens = SecurityManager.getTokens();
+      if (tokens && tokens.group_id) {
+        const response = await profileApi.getConnectedAccounts(tokens.group_id, 1);
+        setConnectedAccounts(response.data || []);
       }
+    } catch (error) {
+      console.error('Failed to fetch connected accounts:', error);
+      setConnectedAccounts([]);
+    } finally {
+      setIsLoadingAccounts(false);
+    }
+  };
+
+  // Fetch accounts on component mount
+  useEffect(() => {
+    fetchConnectedAccounts();
+  }, []);
+
+  // Listen for account connection events
+  useEffect(() => {
+    const handleAccountConnected = () => {
+      fetchConnectedAccounts();
     };
 
-    fetchConnectedAccounts();
+    // Add event listener for account connection
+    window.addEventListener('accountConnected', handleAccountConnected);
+
+    return () => {
+      window.removeEventListener('accountConnected', handleAccountConnected);
+    };
   }, []);
 
   /**
@@ -337,10 +327,10 @@ const Layout: React.FC = () => {
               >
                 <Menu className="w-5 h-5" />
               </button>
-              {/* Desktop sidebar toggle */}
+              {/* Sidebar toggle - always visible */}
               <button
                 onClick={toggleSidebarCollapse}
-                className="hidden lg:flex p-2 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="p-2 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               >
                 <SidebarToggleIcon isCollapsed={sidebarCollapsed} />
