@@ -87,6 +87,7 @@ const App: React.FC = () => {
             </Routes>
           </div>
         </Router>
+        <Analytics />
       </AuthProvider>
     </ThemeProvider>
   );
