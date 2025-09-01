@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 // Import pages
 import LoginPage from './pages/LoginPage';
@@ -88,6 +89,7 @@ const App: React.FC = () => {
           </div>
         </Router>
         <Analytics />
+        <SpeedInsights />
       </AuthProvider>
     </ThemeProvider>
   );
