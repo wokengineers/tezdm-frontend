@@ -1981,20 +1981,20 @@ const SequenceDiagram: React.FC<{ workflow: Workflow; actionFlowType: 'sequentia
             <div key={action.temp_id} className={`${actionFlowType === 'parallel' ? '' : 'flex justify-center'}`}>
               <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 rounded-xl p-4 max-w-sm w-full">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center">
+                  <div className="w-10 h-10 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-sm font-bold text-green-600 dark:text-green-300">
-                      {actionFlowType === 'sequential' ? action.sequence_order : index + 1}
+                      {actionFlowType === 'sequential' ? (action.sequence_order || (index + 1)) : index + 1}
                     </span>
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-green-900 dark:text-green-100">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-green-900 dark:text-green-100 truncate">
                       {action.event_category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </h4>
                     <p className="text-xs text-green-600 dark:text-green-300">
-                      Action {actionFlowType === 'sequential' ? action.sequence_order : index + 1}
+                      Action {actionFlowType === 'sequential' ? (action.sequence_order || (index + 1)) : index + 1}
                     </p>
                     {action.event_config.template && (
-                      <p className="text-xs text-green-500 mt-1 truncate">
+                      <p className="text-xs text-green-500 mt-1 truncate max-w-full">
                         "{action.event_config.template}"
                       </p>
                     )}
@@ -2004,7 +2004,7 @@ const SequenceDiagram: React.FC<{ workflow: Workflow; actionFlowType: 'sequentia
                       </p>
                     )}
                     {action.event_config.button_text && (
-                      <p className="text-xs text-green-500 mt-1">
+                      <p className="text-xs text-green-500 mt-1 truncate max-w-full">
                         Button: "{action.event_config.button_text}"
                       </p>
                     )}

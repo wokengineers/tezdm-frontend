@@ -86,9 +86,9 @@ const LoginPage: React.FC = () => {
       return;
     }
 
-    const success = await login(email, password);
-    if (success) {
-      navigate('/dashboard');
+    const result = await login(email, password);
+    if (result.success) {
+      navigate(result.redirectTo || '/dashboard');
     }
   };
 
