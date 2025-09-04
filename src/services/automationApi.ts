@@ -75,7 +75,8 @@ export const ACTION_LABELS: { [key: string]: string } = {
   'send_dm': 'Send Direct Message',
   'send_dm_webhook': 'Send Direct Message (Webhook)',
   'reply_to_dm': 'Reply to Direct Message',
-  'reply_to_dm_webhook': 'Reply to Direct Message (Webhook)'
+  'reply_to_dm_webhook': 'Reply to Direct Message (Webhook)',
+  'ask_to_follow': 'Ask to Follow'
 };
 
 export const ACTION_DESCRIPTIONS: { [key: string]: string } = {
@@ -84,7 +85,8 @@ export const ACTION_DESCRIPTIONS: { [key: string]: string } = {
   'send_dm': 'Send a direct message to the user',
   'send_dm_webhook': 'Send a webhook notification when sending DM',
   'reply_to_dm': 'Reply to the user\'s direct message',
-  'reply_to_dm_webhook': 'Send a webhook notification when replying to DM'
+  'reply_to_dm_webhook': 'Send a webhook notification when replying to DM',
+  'ask_to_follow': 'Encourage users to follow your account with a message and follow button'
 };
 
 /**

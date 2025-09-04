@@ -426,6 +426,11 @@ const AutomationBuilderPage: React.FC = () => {
         return {
           endpoint: ''
         };
+      case 'ask_to_follow':
+        return {
+          template: '',
+          button_text: ''
+        };
       default:
         return {};
     }
@@ -1605,7 +1610,7 @@ const ActionsStep: React.FC<{
 
       {/* Actions List */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between" data-actions-header>
           <h3 className="text-lg font-medium text-gray-900 dark:text-white">
             Actions ({actionEvents.length})
           </h3>
@@ -1647,6 +1652,17 @@ const ActionsStep: React.FC<{
                             if (!isConflicting && !isSelected) {
                     onAddAction(action.id);
                     document.getElementById('action-selector')?.classList.add('hidden');
+                    
+                    // Scroll down to the newly added action after a short delay
+                    setTimeout(() => {
+                      const actionsList = document.querySelector('[data-actions-list]');
+                      if (actionsList) {
+                        const lastAction = actionsList.lastElementChild;
+                        if (lastAction) {
+                          lastAction.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                      }
+                    }, 100);
                             }
                   }}
                           disabled={isConflicting || isSelected}
@@ -1717,7 +1733,7 @@ const ActionsStep: React.FC<{
             <p>No actions added yet. Click "Add Action" to get started.</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3" data-actions-list>
             {actionEvents.map((action, index) => (
               <div key={action.temp_id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-4">
@@ -1788,6 +1804,30 @@ const ActionsStep: React.FC<{
                 })()}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Bottom Add Action Button - only show when there are actions */}
+        {actionEvents.length > 0 && (
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => {
+                // Option 1: Scroll to top where action selector is
+                const actionSelector = document.getElementById('action-selector');
+                const actionsHeader = document.querySelector('[data-actions-header]');
+                
+                if (actionSelector && actionsHeader) {
+                  // Show the action selector
+                  actionSelector.classList.remove('hidden');
+                  // Scroll to the actions section smoothly
+                  actionsHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
+              className="btn-primary flex items-center"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Another Action
+            </button>
           </div>
         )}
       </div>
