@@ -18,6 +18,7 @@ A modern, scalable React-based frontend for an Instagram Automation Platform tha
 - **Responsive Design**: Works perfectly on desktop, tablet, and mobile
 - **Real-time Updates**: Live activity monitoring and status updates
 - **Intuitive Navigation**: Easy-to-use sidebar navigation with collapsible design
+- **Profile Integration**: Sidebar displays actual profile images from connected social accounts
 - **Account Switcher**: Dedicated panel for managing multiple social accounts
 
 ### Scalability
@@ -115,6 +116,7 @@ A modern, scalable React-based frontend for an Instagram Automation Platform tha
 - **Account Status**: Connection status and management options
 - **Account Switcher**: Easy switching between multiple connected accounts
 - **Connected Accounts Required**: Users must connect Instagram accounts before creating automations
+- **Action Labels**: Proper user-friendly labels for all automation actions (e.g., "Ask to Follow" instead of "ask_to_follow")
 
 ### Automation
 - **Automation List**: View all automation rules with edit/delete options
@@ -150,7 +152,10 @@ src/
 ```
 
 ### Key Components
-- **Layout**: Main layout with sidebar navigation
+- **Layout**: Main layout with sidebar navigation and profile integration
+  - **Sidebar Navigation**: Collapsible navigation with platform-specific badges
+  - **Profile Display**: Shows actual profile images from connected social accounts
+  - **User Section**: Displays user info with fallback to generic avatar
 - **ProtectedRoute**: Authentication guard component
 - **ThemeProvider**: Dark/light mode management
 - **AuthProvider**: User authentication state
