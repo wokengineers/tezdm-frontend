@@ -1221,7 +1221,8 @@ const BaseWebhookForm: React.FC<{
   examplePayload: string;
   expectedResponse: string;
   title: string;
-}> = ({ config, onChange, errors, examplePayload, expectedResponse, title }) => {
+  showCharacterLimit?: boolean;
+}> = ({ config, onChange, errors, examplePayload, expectedResponse, title, showCharacterLimit }) => {
   const validateForm = (): FormValidation => {
     const errors: ValidationError[] = [];
 
@@ -1280,6 +1281,11 @@ const BaseWebhookForm: React.FC<{
         <p className="text-xs text-green-600 dark:text-green-400 mt-2">
           Your webhook should return this JSON response to complete the action.
         </p>
+        {showCharacterLimit && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 font-medium">
+            ⚠️ Response message must be ≤ 1000 characters
+          </p>
+        )}
       </div>
 
       <div className="p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs">
@@ -1313,7 +1319,8 @@ const BaseWebhookForm: React.FC<{
  */
 export const SendDmWebhookForm: React.FC<BaseFormProps> = ({ config, onChange, errors }) => {
   const examplePayload = `{
-  "message": "Hello from Instagram!"
+  "message": "Hello from Instagram!",
+  "sender_id": "12345678901234567"
 }`;
 
   const expectedResponse = `{
@@ -1328,6 +1335,7 @@ export const SendDmWebhookForm: React.FC<BaseFormProps> = ({ config, onChange, e
       examplePayload={examplePayload}
       expectedResponse={expectedResponse}
       title="Send DM Webhook"
+      showCharacterLimit={true}
     />
   );
 };
@@ -1361,7 +1369,8 @@ export const ReplyToCommentWebhookForm: React.FC<BaseFormProps> = ({ config, onC
  */
 export const ReplyToDmWebhookForm: React.FC<BaseFormProps> = ({ config, onChange, errors }) => {
   const examplePayload = `{
-  "message": "Hello from Instagram!"
+  "message": "Hello from Instagram!",
+  "sender_id": "12345678901234567"
 }`;
 
   const expectedResponse = `{
@@ -1376,6 +1385,7 @@ export const ReplyToDmWebhookForm: React.FC<BaseFormProps> = ({ config, onChange
       examplePayload={examplePayload}
       expectedResponse={expectedResponse}
       title="Reply to DM Webhook"
+      showCharacterLimit={true}
     />
   );
 };
