@@ -1694,15 +1694,16 @@ export const SendDmForm: React.FC<BaseFormProps> = ({ config, onChange, errors }
  * Ask to Follow Form
  */
 export const AskToFollowForm: React.FC<BaseFormProps> = ({ config, onChange, errors }) => {
-  // Initialize with default message and button text only on first load
+  // Initialize with default message and button text if empty
   React.useEffect(() => {
-    if (config.template === undefined && config.button_text === undefined) {
+    const needsDefaults = !config.template || !config.button_text;
+    if (needsDefaults) {
       const defaultMessage = "Follow me for exciting offers and exclusive content! 🚀";
       const defaultButtonText = "✅ I am following";
       onChange({ 
         ...config, 
-        template: defaultMessage,
-        button_text: defaultButtonText
+        template: config.template || defaultMessage,
+        button_text: config.button_text || defaultButtonText
       });
     }
   }, []);
