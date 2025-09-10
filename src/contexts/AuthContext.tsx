@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { mockData } from '../constants/mockApi';
 import { authApi } from '../services/authApi';
+import { profileApi } from '../services/profileApi';
 import { SecurityManager } from '../utils/securityManager';
 
 /**
@@ -26,6 +27,14 @@ interface User {
 }
 
 /**
+ * Login result interface
+ */
+interface LoginResult {
+  success: boolean;
+  redirectTo?: string;
+}
+
+/**
  * Auth context interface
  */
 interface AuthContextType {
@@ -33,7 +42,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   isAuthLoading: boolean; // Added for auth operation loading state
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<LoginResult>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   signout: () => Promise<void>;
@@ -50,7 +59,7 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isLoading: true,
   isAuthLoading: false, // Added for auth operation loading state
-  login: async () => false,
+  login: async () => ({ success: false }),
   signup: async () => false,
   logout: () => {},
   signout: async () => {},
@@ -88,7 +97,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    * @param password - User password
    * @returns Promise resolving to success status
    */
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<LoginResult> => {
     try {
       setIsAuthLoading(true);
       setError(null);
@@ -146,11 +155,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         group_id: firstGroup.id
       });
       
-      return true;
+      // Step 5: Check for connected accounts
+      try {
+        const connectedAccountsResponse = await profileApi.getConnectedAccounts(firstGroup.id);
+        const connectedAccounts = connectedAccountsResponse.data || [];
+        
+        // Check if user has any connected Instagram accounts
+        const hasInstagramAccount = connectedAccounts.some(account => 
+          account.platform === 'instagram' && 
+          (account.state === 'connected' || account.state === 'token_available')
+        );
+        
+        if (hasInstagramAccount) {
+          return { success: true, redirectTo: '/automations' };
+        } else {
+          return { success: true, redirectTo: '/connect-accounts' };
+        }
+      } catch (accountError) {
+        console.error('Failed to check connected accounts:', accountError);
+        // If we can't check accounts, default to connect accounts page
+        return { success: true, redirectTo: '/connect-accounts' };
+      }
     } catch (error) {
       console.error('Login error:', error);
       setError(error instanceof Error ? error.message : 'Login failed. Please try again.');
-      return false;
+      return { success: false };
     } finally {
       setIsAuthLoading(false);
     }

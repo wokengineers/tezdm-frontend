@@ -426,6 +426,11 @@ const AutomationBuilderPage: React.FC = () => {
         return {
           endpoint: ''
         };
+      case 'ask_to_follow':
+        return {
+          template: '',
+          button_text: ''
+        };
       default:
         return {};
     }
@@ -1605,7 +1610,7 @@ const ActionsStep: React.FC<{
 
       {/* Actions List */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between" data-actions-header>
           <h3 className="text-lg font-medium text-gray-900 dark:text-white">
             Actions ({actionEvents.length})
           </h3>
@@ -1647,6 +1652,17 @@ const ActionsStep: React.FC<{
                             if (!isConflicting && !isSelected) {
                     onAddAction(action.id);
                     document.getElementById('action-selector')?.classList.add('hidden');
+                    
+                    // Scroll down to the newly added action after a short delay
+                    setTimeout(() => {
+                      const actionsList = document.querySelector('[data-actions-list]');
+                      if (actionsList) {
+                        const lastAction = actionsList.lastElementChild;
+                        if (lastAction) {
+                          lastAction.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                      }
+                    }, 100);
                             }
                   }}
                           disabled={isConflicting || isSelected}
@@ -1717,7 +1733,7 @@ const ActionsStep: React.FC<{
             <p>No actions added yet. Click "Add Action" to get started.</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3" data-actions-list>
             {actionEvents.map((action, index) => (
               <div key={action.temp_id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-4">
@@ -1788,6 +1804,30 @@ const ActionsStep: React.FC<{
                 })()}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Bottom Add Action Button - only show when there are actions */}
+        {actionEvents.length > 0 && (
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => {
+                // Option 1: Scroll to top where action selector is
+                const actionSelector = document.getElementById('action-selector');
+                const actionsHeader = document.querySelector('[data-actions-header]');
+                
+                if (actionSelector && actionsHeader) {
+                  // Show the action selector
+                  actionSelector.classList.remove('hidden');
+                  // Scroll to the actions section smoothly
+                  actionsHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
+              className="btn-primary flex items-center"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Another Action
+            </button>
           </div>
         )}
       </div>
@@ -1981,20 +2021,20 @@ const SequenceDiagram: React.FC<{ workflow: Workflow; actionFlowType: 'sequentia
             <div key={action.temp_id} className={`${actionFlowType === 'parallel' ? '' : 'flex justify-center'}`}>
               <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 rounded-xl p-4 max-w-sm w-full">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center">
+                  <div className="w-10 h-10 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-sm font-bold text-green-600 dark:text-green-300">
-                      {actionFlowType === 'sequential' ? action.sequence_order : index + 1}
+                      {actionFlowType === 'sequential' ? (action.sequence_order || (index + 1)) : index + 1}
                     </span>
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-green-900 dark:text-green-100">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-green-900 dark:text-green-100 truncate">
                       {action.event_category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </h4>
                     <p className="text-xs text-green-600 dark:text-green-300">
-                      Action {actionFlowType === 'sequential' ? action.sequence_order : index + 1}
+                      Action {actionFlowType === 'sequential' ? (action.sequence_order || (index + 1)) : index + 1}
                     </p>
                     {action.event_config.template && (
-                      <p className="text-xs text-green-500 mt-1 truncate">
+                      <p className="text-xs text-green-500 mt-1 truncate max-w-full">
                         "{action.event_config.template}"
                       </p>
                     )}
@@ -2004,7 +2044,7 @@ const SequenceDiagram: React.FC<{ workflow: Workflow; actionFlowType: 'sequentia
                       </p>
                     )}
                     {action.event_config.button_text && (
-                      <p className="text-xs text-green-500 mt-1">
+                      <p className="text-xs text-green-500 mt-1 truncate max-w-full">
                         Button: "{action.event_config.button_text}"
                       </p>
                     )}

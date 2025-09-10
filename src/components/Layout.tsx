@@ -284,23 +284,62 @@ const Layout: React.FC = () => {
         {/* User section */}
         <div className="p-2 border-t border-gray-200 dark:border-gray-700">
           {sidebarCollapsed ? (
-            // Collapsed user section - just avatar
+            // Collapsed user section - just icon
             <div className="flex justify-center">
-              <img
-                src={user?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face'}
-                alt={user?.name}
-                className="w-8 h-8 rounded-full cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all"
-                title={`${user?.name} (${user?.plan} Plan)`}
-              />
+              {connectedAccount?.profile_link ? (
+                // Use actual profile photo
+                <div className="w-8 h-8 rounded-full overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all">
+                  <img 
+                    src={connectedAccount.profile_link} 
+                    alt={connectedAccount.name || 'Profile'} 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback to avatar if image fails to load
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      target.nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                  {/* Fallback avatar (hidden by default) */}
+                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-semibold hidden">
+                    {connectedAccount.name ? connectedAccount.name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                </div>
+              ) : (
+                // Use avatar when no profile link
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+              )}
             </div>
           ) : (
             // Expanded user section
             <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
-              <img
-                src={user?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face'}
-                alt={user?.name}
-                className="w-8 h-8 rounded-full flex-shrink-0"
-              />
+              {connectedAccount?.profile_link ? (
+                // Use actual profile photo
+                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                  <img 
+                    src={connectedAccount.profile_link} 
+                    alt={connectedAccount.name || 'Profile'} 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback to avatar if image fails to load
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      target.nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                  {/* Fallback avatar (hidden by default) */}
+                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-semibold hidden">
+                    {connectedAccount.name ? connectedAccount.name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                </div>
+              ) : (
+                // Use avatar when no profile link
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                   {user?.name}
