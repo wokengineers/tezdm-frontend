@@ -27,6 +27,7 @@ import ActivityLogPage from './pages/ActivityLogPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 import Layout from './components/Layout';
+import PostHogAuthIntegration from './components/PostHogAuthIntegration';
 
 /**
  * Main App component that sets up routing and providers
@@ -36,6 +37,7 @@ const App: React.FC = () => {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <PostHogAuthIntegration />
         <Router>
           <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
             <Routes>
