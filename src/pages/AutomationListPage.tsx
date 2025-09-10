@@ -25,7 +25,6 @@ const AutomationListPage: React.FC = () => {
 
   // Handle editing automation
   const handleEditAutomation = (automation: Automation) => {
-    console.log('📝 Navigating to edit automation:', automation);
     // Navigate to automation builder with the automation data
     navigate('/automations/new', { 
       state: { 
@@ -82,10 +81,7 @@ const AutomationListPage: React.FC = () => {
   const loadTriggerActionConfig = async () => {
     try {
       setIsLoadingConfig(true);
-      console.log('🚀 Loading trigger-action configuration...');
       const response = await automationApi.getTriggerActionConfig();
-      console.log('✅ Trigger-action configuration loaded:', response.data);
-      console.log('📋 Available triggers:', Object.keys(response.data));
       setTriggerActionConfig(response.data);
     } catch (error) {
       console.error('❌ Failed to load trigger-action configuration:', error);
@@ -100,9 +96,7 @@ const AutomationListPage: React.FC = () => {
     
     try {
       setIsLoadingAccounts(true);
-      console.log('🔗 Loading connected accounts...');
       const response = await profileApi.getConnectedAccounts(groupId, 1);
-      console.log('✅ Connected accounts loaded:', response.data);
       setConnectedAccounts(response.data);
       setHasConnectedAccounts(response.data.length > 0);
     } catch (error) {
@@ -137,8 +131,6 @@ const AutomationListPage: React.FC = () => {
     if (!groupId) return;
 
     const fetchAutomations = async () => {
-      console.log('Fetching automations with filters:', { groupId, debouncedSearchTerm, statusFilter, typeFilter, sortBy });
-      
       setIsLoadingAutomations(true);
       
       const filters: any = {};
@@ -163,7 +155,6 @@ const AutomationListPage: React.FC = () => {
 
       try {
         const response = await automationApi.getAutomations(groupId, filters);
-        console.log('Automations API response:', response);
         setAutomations(response.data);
       } catch (error) {
         console.error('Failed to fetch automations:', error);
@@ -219,9 +210,7 @@ const AutomationListPage: React.FC = () => {
 
     try {
       setTogglingAutomation(automationId);
-      console.log('Toggling automation:', { automationId, currentStatus, groupId });
       const response = await automationApi.toggleAutomation(automationId, groupId, !currentStatus);
-      console.log('Toggle response:', response);
       
       // Update local state with the returned data
       setAutomations(prev => prev.map(automation => 
@@ -270,9 +259,7 @@ const AutomationListPage: React.FC = () => {
 
     try {
       setDeletingAutomation(deleteModal.automationId);
-      console.log('Deleting automation:', { automationId: deleteModal.automationId, groupId });
       await automationApi.deleteAutomation(deleteModal.automationId, groupId);
-      console.log('Automation deleted successfully');
       
       // Remove from local state
       setAutomations(prev => prev.filter(automation => automation.id !== deleteModal.automationId));
@@ -456,7 +443,6 @@ const AutomationListPage: React.FC = () => {
               <div
                 key={automation.id}
                 onClick={() => {
-                  console.log('🖱️ Card clicked for automation:', automation.id);
                   handleEditAutomation(automation);
                 }}
                 className="card group hover:shadow-md transition-all duration-200 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"

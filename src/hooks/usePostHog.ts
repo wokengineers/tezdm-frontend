@@ -43,12 +43,6 @@ export const usePostHog = () => {
 
       // Identify the user with PostHog
       posthog.identify(userData.id, userProperties);
-      
-      console.log('✅ PostHog user identified:', {
-        userId: userData.id,
-        userName: userData.name,
-        userEmail: userData.email,
-      });
     } catch (error) {
       console.error('❌ PostHog user identification failed:', error);
     }
@@ -62,7 +56,6 @@ export const usePostHog = () => {
 
     try {
       posthog.reset();
-      console.log('✅ PostHog user reset');
     } catch (error) {
       console.error('❌ PostHog user reset failed:', error);
     }
@@ -91,7 +84,6 @@ export const usePostHog = () => {
       };
 
       posthog.capture(eventName, eventProperties);
-      console.log('📊 PostHog event tracked:', { eventName, properties: eventProperties });
     } catch (error) {
       console.error('❌ PostHog event tracking failed:', error);
     }
@@ -121,7 +113,6 @@ export const usePostHog = () => {
       };
 
       posthog.capture('$pageview', pageProperties);
-      console.log('📄 PostHog page view tracked:', { pageName, properties: pageProperties });
     } catch (error) {
       console.error('❌ PostHog page view tracking failed:', error);
     }
@@ -136,7 +127,6 @@ export const usePostHog = () => {
 
     try {
       posthog.people.set(properties);
-      console.log('👤 PostHog user properties updated:', properties);
     } catch (error) {
       console.error('❌ PostHog user properties update failed:', error);
     }
@@ -160,7 +150,6 @@ export const usePostHog = () => {
       };
 
       posthog.capture(eventName, eventProperties);
-      console.log('👻 PostHog anonymous event tracked:', { eventName, properties: eventProperties });
     } catch (error) {
       console.error('❌ PostHog anonymous event tracking failed:', error);
     }

@@ -35,21 +35,13 @@ const InstagramStorySelector: React.FC<InstagramStorySelectorProps> = ({
   const [selectedStories, setSelectedStories] = useState<string[]>(selectedStoryIds);
   const [error, setError] = useState<string | null>(null);
   
-  // Debug: Log state changes
-  useEffect(() => {
-    console.log('📸 Story State changed:', { error, loading, stories: stories.length });
-  }, [error, loading, stories]);
   
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Load initial stories
   useEffect(() => {
-    console.log('📸 Story useEffect triggered:', { isOpen, profileInfoId, groupId });
     if (isOpen && profileInfoId && groupId) {
-      console.log('📸 Calling loadStories from useEffect');
       loadStories();
-    } else {
-      console.log('📸 Not calling loadStories:', { isOpen, profileInfoId, groupId });
     }
   }, [isOpen, profileInfoId, groupId]);
 
@@ -67,14 +59,10 @@ const InstagramStorySelector: React.FC<InstagramStorySelectorProps> = ({
         setLoading(true);
       }
 
-      console.log('📸 Loading stories with:', { profileInfoId, groupId, cursor });
       const response = await automationApi.getStories(profileInfoId, groupId, cursor);
-      
-      console.log('📸 Stories API Response:', response);
       
       // The API returns data directly in response.data (which is an array)
       if (response.data && Array.isArray(response.data)) {
-        console.log('📸 Stories data:', response.data);
         if (cursor) {
           setStories(prev => [...prev, ...response.data]);
         } else {
@@ -142,11 +130,6 @@ const InstagramStorySelector: React.FC<InstagramStorySelectorProps> = ({
   };
 
   const filteredStories = stories || [];
-  
-  console.log('📸 Current stories state:', stories);
-  console.log('📸 Filtered stories:', filteredStories);
-  console.log('📸 Error state:', error);
-  console.log('📸 Loading state:', loading);
 
   const isVideo = (url: string) => {
     return url.includes('.mp4') || url.includes('video');

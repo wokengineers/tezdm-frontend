@@ -88,8 +88,6 @@ const AutomationBuilderPage: React.FC = () => {
   const editMode = location.state?.editMode || false;
   const editAutomation = location.state?.automation || null;
   
-  console.log('🔧 AutomationBuilderPage - Edit mode:', editMode);
-  console.log('🔧 AutomationBuilderPage - Edit automation:', editAutomation);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [workflow, setWorkflow] = useState<Workflow>({
     name: '',
@@ -129,7 +127,6 @@ const AutomationBuilderPage: React.FC = () => {
   // Initialize workflow data for edit mode
   useEffect(() => {
     if (editMode && editAutomation) {
-      console.log('🔧 Edit mode - Loading automation:', editAutomation);
       
       // Convert automation data to workflow format
       const events: Event[] = editAutomation.events.map((event: any) => ({
@@ -178,7 +175,6 @@ const AutomationBuilderPage: React.FC = () => {
 
       const response = await profileApi.getConnectedAccounts(groupId, 1);
       if (response.data && response.data.length > 0) {
-        console.log('📸 Connected account data:', response.data[0]);
         setConnectedAccount(response.data[0]); // Use first account
         setConnectedAccounts(response.data);
         setHasConnectedAccounts(true);
@@ -200,11 +196,8 @@ const AutomationBuilderPage: React.FC = () => {
    * Load trigger-action configuration from API
    */
   useEffect(() => {
-    console.log('useEffect triggered - hasLoadedRef.current:', hasLoadedRef.current);
-    
     // Prevent multiple API calls
     if (hasLoadedRef.current) {
-      console.log('API already called, skipping...');
       return;
     }
 
@@ -220,12 +213,9 @@ const AutomationBuilderPage: React.FC = () => {
         setIsLoadingConfig(true);
         setConfigError(null);
         
-        console.log('🚀 Loading trigger-action configuration...');
         const response = await automationApi.getTriggerActionConfig();
-        console.log('✅ Trigger-action configuration loaded:', response.data);
         
         if (!isMounted || abortController.signal.aborted) {
-          console.log('❌ Component unmounted or aborted, skipping state update');
           return;
         }
         
@@ -257,11 +247,8 @@ const AutomationBuilderPage: React.FC = () => {
         EVENT_CATEGORIES.TRIGGERS = triggers;
         EVENT_CATEGORIES.ACTIONS = actions;
         
-        console.log('🎉 Configuration setup complete');
-        
       } catch (error) {
         if (!isMounted || abortController.signal.aborted) {
-          console.log('❌ Component unmounted or aborted during error, skipping error state update');
           return;
         }
         console.error('❌ Failed to load trigger-action configuration:', error);
@@ -269,7 +256,6 @@ const AutomationBuilderPage: React.FC = () => {
       } finally {
         if (isMounted && !abortController.signal.aborted) {
           setIsLoadingConfig(false);
-          console.log('🏁 Loading state set to false');
         }
       }
     };
@@ -277,7 +263,6 @@ const AutomationBuilderPage: React.FC = () => {
     loadTriggerActionConfig();
 
     return () => {
-      console.log('🧹 Cleanup function called');
       isMounted = false;
       abortController.abort();
     };
@@ -745,11 +730,6 @@ const AutomationBuilderPage: React.FC = () => {
         
         // Smart filtering based on user selections
         const cleanEventConfig = filterEventConfigBySelection(triggerEvent.event_config, triggerEvent.event_category);
-        console.log('🎯 Filtered trigger config:', {
-          original: triggerEvent.event_config,
-          filtered: cleanEventConfig,
-          category: triggerEvent.event_category
-        });
         
         events.push({
           event_type: 'trigger',
@@ -807,13 +787,9 @@ const AutomationBuilderPage: React.FC = () => {
       };
 
       if (editMode && editAutomation) {
-        console.log('Updating automation with payload:', payload);
         const response = await automationApi.updateWorkflow(editAutomation.id, groupId, payload);
-        console.log('Automation updated successfully:', response);
       } else {
-        console.log('Creating automation with payload:', payload);
         const response = await automationApi.createWorkflow(payload);
-      console.log('Automation created successfully:', response);
       }
 
       // Redirect to automations list

@@ -61,12 +61,10 @@ const ConnectAccountsPage: React.FC = () => {
   };
 
   const loadPlatforms = useCallback(async (): Promise<void> => {
-    console.log('Loading platforms...');
     setError('');
     setLoadingPlatforms(true);
     try {
       const response = await profileApi.getOAuthPlatforms();
-      console.log('Platforms API response:', response);
       setPlatforms(response.data);
       // After platforms are loaded, load connected accounts
       await loadConnectedAccounts();
@@ -98,7 +96,6 @@ const ConnectAccountsPage: React.FC = () => {
     setLoadingAccounts(true);
     try {
       const response = await profileApi.getConnectedAccounts(groupId);
-      console.log('Connected accounts API response:', response);
       setConnectedAccounts(response.data);
     } catch (error) {
       console.error('Failed to load connected accounts:', error);
@@ -133,7 +130,6 @@ const ConnectAccountsPage: React.FC = () => {
     
     try {
       const response = await profileApi.getOAuthUrl(platform.id, groupId);
-      console.log('OAuth URL response:', response);
       setOauthUrl(response.data.url);
       setShowModal(true);
     } catch (error) {
@@ -180,7 +176,6 @@ const ConnectAccountsPage: React.FC = () => {
     setDeletingAccount(accountToDelete.id);
     try {
       await profileApi.deleteConnectedAccount(accountToDelete.id, groupId);
-      console.log('Account deleted successfully');
       // Reload connected accounts after successful deletion
       await loadConnectedAccounts();
       // Dispatch event to refresh sidebar accounts

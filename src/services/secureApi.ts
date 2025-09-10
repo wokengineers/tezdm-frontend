@@ -158,7 +158,6 @@ export class SecureApiService {
         return null;
       }
 
-      console.log('Refreshing access token...');
       
       // Call refresh token API
       const response = await authApi.refreshTokenWithGroup(
@@ -181,7 +180,6 @@ export class SecureApiService {
         group_id: tokens.group_id
       });
 
-      console.log('Token refreshed successfully');
       return newTokens.access_token;
     } catch (error) {
       console.error('Token refresh failed:', error);
@@ -194,7 +192,6 @@ export class SecureApiService {
    * Handle logout when token refresh fails
    */
   private handleLogout(): void {
-    console.log('Handling logout due to authentication failure');
     SecurityManager.clearAllData();
     
     // Dispatch logout event for components to handle

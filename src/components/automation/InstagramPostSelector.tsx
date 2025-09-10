@@ -26,22 +26,12 @@ const InstagramPostSelector: React.FC<InstagramPostSelectorProps> = ({
   const [selectedPosts, setSelectedPosts] = useState<string[]>(selectedPostIds);
   const [error, setError] = useState<string | null>(null);
   
-  // Debug: Log state changes
-  useEffect(() => {
-    console.log('📸 State changed:', { error, loading, posts: posts.length });
-  }, [error, loading, posts]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Load initial posts
   useEffect(() => {
-    console.log('📸 useEffect triggered:', { isOpen, profileInfoId, groupId });
     if (isOpen && profileInfoId && groupId) {
-      console.log('📸 Calling loadPosts from useEffect');
-      // Temporary: Test error display
-      // setError('Test error message');
       loadPosts();
-    } else {
-      console.log('📸 Not calling loadPosts:', { isOpen, profileInfoId, groupId });
     }
   }, [isOpen, profileInfoId, groupId]);
 
@@ -59,14 +49,10 @@ const InstagramPostSelector: React.FC<InstagramPostSelectorProps> = ({
         setLoading(true);
       }
 
-      console.log('📸 Loading posts with:', { profileInfoId, groupId, cursor });
       const response = await automationApi.getPosts(profileInfoId, groupId, cursor);
-      
-      console.log('📸 Posts API Response:', response);
       
       // The API returns data directly in response.data (which is an array)
       if (response.data && Array.isArray(response.data)) {
-        console.log('📸 Posts data:', response.data);
         if (cursor) {
           setPosts(prev => [...prev, ...response.data]);
         } else {
@@ -134,11 +120,6 @@ const InstagramPostSelector: React.FC<InstagramPostSelectorProps> = ({
   };
 
   const filteredPosts = posts || [];
-  
-  console.log('📸 Current posts state:', posts);
-  console.log('📸 Filtered posts:', filteredPosts);
-  console.log('📸 Error state:', error);
-  console.log('📸 Loading state:', loading);
 
   const isVideo = (url: string) => {
     return url.includes('.mp4') || url.includes('video');

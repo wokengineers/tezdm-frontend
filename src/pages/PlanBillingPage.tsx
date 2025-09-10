@@ -59,7 +59,6 @@ const PlanBillingPage: React.FC = () => {
    */
   const handleDownloadInvoice = (invoiceId: string): void => {
     // Simulate invoice download
-    console.log('Downloading invoice:', invoiceId);
   };
 
   /**

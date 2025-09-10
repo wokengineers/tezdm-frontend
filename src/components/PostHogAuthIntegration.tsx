@@ -17,9 +17,6 @@ const PostHogAuthIntegration: React.FC = () => {
    */
   useEffect(() => {
     if (isAuthenticated && user) {
-      // User logged in - this will be handled by the usePostHog hook automatically
-      console.log('🔐 PostHog: User authenticated', { userId: user.id, userName: user.name });
-      
       // Track login event with additional context
       trackEvent('User Login', {
         loginMethod: 'email_password',
@@ -27,9 +24,6 @@ const PostHogAuthIntegration: React.FC = () => {
         connectedAccountsCount: user.connectedAccounts.length,
         timestamp: new Date().toISOString(),
       });
-    } else if (!isAuthenticated) {
-      // User logged out - this will be handled by the usePostHog hook automatically
-      console.log('🔐 PostHog: User logged out');
     }
   }, [isAuthenticated, user, trackEvent]);
 

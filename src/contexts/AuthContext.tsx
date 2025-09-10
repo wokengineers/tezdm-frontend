@@ -286,7 +286,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // Listen for logout events from secure API
     const handleLogout = (event: CustomEvent) => {
-      console.log('Received logout event:', event.detail);
       logout();
     };
 

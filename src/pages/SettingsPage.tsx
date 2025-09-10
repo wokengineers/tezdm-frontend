@@ -137,7 +137,6 @@ const SettingsPage: React.FC = () => {
   const handleDeleteAccount = (): void => {
     if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
       // Handle account deletion
-      console.log('Account deletion requested');
     }
   };
 

@@ -221,12 +221,9 @@ export const automationApi = {
     }
     
     const url = `/tezdm/workflow/get_instagram_posts/?${params.toString()}`;
-    console.log('📸 API URL:', url);
-    console.log('📸 API Parameters:', { profileInfoId, groupId, nextCursor });
     
     try {
       const response = await this.makeRequest<InstagramPost[]>(url);
-      console.log('📸 API Response:', response);
       return response;
     } catch (error) {
       console.error('📸 API Error:', error);
@@ -244,12 +241,9 @@ export const automationApi = {
     }
     
     const url = `/tezdm/workflow/get_instagram_stories/?${params.toString()}`;
-    console.log('📸 Stories API URL:', url);
-    console.log('📸 Stories API Parameters:', { profileInfoId, groupId, nextCursor });
     
     try {
       const response = await this.makeRequest<any[]>(url);
-      console.log('📸 Stories API Response:', response);
       return response;
     } catch (error) {
       console.error('📸 Stories API Error:', error);

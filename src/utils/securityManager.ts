@@ -147,11 +147,7 @@ export class SecurityManager {
       
       // Security logging
       if (this.ENABLE_SECURITY_LOGGING) {
-        console.log(`🔒 [SECURITY] Data stored securely: ${key}`, {
-          encrypted: options.encrypt || false,
-          timestamp: new Date().toISOString(),
-          checksum: dataWithMeta.checksum
-        });
+        // Data stored securely
       }
     } catch (error) {
       console.error(`Failed to store data for key ${key}:`, error);
