@@ -155,6 +155,75 @@ export const usePostHog = () => {
     }
   };
 
+  /**
+   * Capture error in PostHog
+   * @param error - Error object
+   * @param context - Additional context about the error
+   */
+  const captureError = (error: Error, context?: Record<string, any>): void => {
+    if (!posthog) return;
+    try {
+      const errorProperties = {
+        error_message: error.message,
+        error_name: error.name,
+        error_stack: error.stack,
+        ...(user && {
+          userId: user.id,
+          userName: user.name,
+          userPlan: user.plan,
+        }),
+        domain: window.location.hostname,
+        subdomain: window.location.hostname.includes('app.') ? 'app' : 'landing',
+        url: window.location.href,
+        user_agent: navigator.userAgent,
+        timestamp: new Date().toISOString(),
+        severity: 'error',
+        ...context,
+      };
+      
+      posthog.capture('JavaScript Error', errorProperties);
+    } catch (posthogError) {
+      console.error('❌ PostHog error capture failed:', posthogError);
+    }
+  };
+
+  /**
+   * Capture API error in PostHog
+   * @param error - Error object
+   * @param endpoint - API endpoint that failed
+   * @param method - HTTP method
+   * @param statusCode - HTTP status code
+   */
+  const captureApiError = (error: Error, endpoint: string, method: string, statusCode?: number): void => {
+    if (!posthog) return;
+    try {
+      const errorProperties = {
+        error_message: error.message,
+        error_name: error.name,
+        error_stack: error.stack,
+        api_endpoint: endpoint,
+        api_method: method,
+        http_status_code: statusCode,
+        ...(user && {
+          userId: user.id,
+          userName: user.name,
+          userPlan: user.plan,
+        }),
+        domain: window.location.hostname,
+        subdomain: window.location.hostname.includes('app.') ? 'app' : 'landing',
+        url: window.location.href,
+        user_agent: navigator.userAgent,
+        timestamp: new Date().toISOString(),
+        severity: 'error',
+        error_type: 'api_error',
+      };
+      
+      posthog.capture('API Error', errorProperties);
+    } catch (posthogError) {
+      console.error('❌ PostHog API error capture failed:', posthogError);
+    }
+  };
+
   // Automatically identify user when authentication state changes
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -172,6 +241,8 @@ export const usePostHog = () => {
     trackPageView,
     updateUserProperties,
     trackAnonymousEvent,
+    captureError,
+    captureApiError,
     isUserIdentified: isAuthenticated && !!user,
   };
 };

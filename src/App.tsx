@@ -28,6 +28,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 import Layout from './components/Layout';
 import PostHogAuthIntegration from './components/PostHogAuthIntegration';
+import ErrorBoundary from './components/ErrorBoundary';
+import ErrorTestComponent from './components/ErrorTestComponent';
 
 /**
  * Main App component that sets up routing and providers
@@ -35,12 +37,13 @@ import PostHogAuthIntegration from './components/PostHogAuthIntegration';
  */
 const App: React.FC = () => {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <PostHogAuthIntegration />
-        <Router>
-          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-            <Routes>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <PostHogAuthIntegration />
+          <Router>
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+              <Routes>
               {/* Public routes - redirect authenticated users to dashboard */}
               <Route path="/login" element={
                 <PublicRoute>
@@ -89,11 +92,13 @@ const App: React.FC = () => {
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </div>
-        </Router>
-        <Analytics />
-        <SpeedInsights />
-      </AuthProvider>
-    </ThemeProvider>
+          </Router>
+          <Analytics />
+          <SpeedInsights />
+          <ErrorTestComponent />
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 };
 

@@ -4,6 +4,7 @@ import App from './App';
 import './index.css';
 import { PostHogProvider } from 'posthog-js/react';
 import type { PostHogConfig } from 'posthog-js';
+import { setupGlobalErrorHandlers } from './utils/errorTracker';
 
 /**
  * PostHog Analytics Configuration
@@ -22,7 +23,34 @@ const posthogOptions: Partial<PostHogConfig> = {
   persistence: 'localStorage+cookie' as const,
   // Ensures SPA pageviews fire on route changes without extra code
   defaults: '2025-05-24' as const,
+  
+  // Error Capture Configuration
+  capture_pageview: true,
+  capture_pageleave: true,
+  capture_performance: true,
+  
+  // Automatic error capture
+  autocapture: {
+    dom_event_allowlist: ['click', 'change', 'submit'],
+    url_allowlist: ['.*'],
+    element_allowlist: ['a', 'button', 'form', 'input', 'select', 'textarea'],
+    css_selector_allowlist: ['.btn', '.button', '[role="button"]']
+  },
+  
+  // Session recording (optional - can be enabled later)
+  session_recording: {
+    maskAllInputs: true,
+    maskInputOptions: {
+      password: true,
+      email: true,
+      tel: true
+    },
+    recordCrossOriginIframes: false
+  }
 };
+
+// Setup global error handlers for automatic error capture
+setupGlobalErrorHandlers();
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
